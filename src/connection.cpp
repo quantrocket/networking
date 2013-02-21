@@ -1,13 +1,13 @@
 #include "connection.hpp"
 
-TcpConnection::TcpConnection() {
-    this->socket = NULL;
-    this->serve  = false;
+TcpConnection::TcpConnection()
+    : socket(NULL)
+    , serve(false) {
 }
 
-TcpConnection::TcpConnection(TCPsocket socket) {
-    this->socket = socket;
-    this->serve  = false;
+TcpConnection::TcpConnection(TCPsocket socket)
+    : socket(socket)
+    , serve(false) {
 }
 
 TcpConnection::~TcpConnection() {
@@ -74,9 +74,9 @@ void TcpConnection::send(void* data, int len) {
     if (this->serve) {
         throw NetworkError("TCP Socket is listening");
     }
-    // write byte amount first
+    // write byte amount
     SDLNet_TCP_Send(this->socket, &len, sizeof(int));
-    // then write actual data
+    // write actual data
     if (SDLNet_TCP_Send(this->socket, data, len) < len) {
         throw NetworkError("SDLNet_TCP_Send: " + std::string(SDLNet_GetError()));
     }
@@ -89,10 +89,12 @@ void* TcpConnection::receive() {
     if (this->serve) {
         throw NetworkError("TCP Socket is listening");
     }
-    // read byte amount first
+    // read byte amount
     int len;
     SDLNet_TCP_Recv(this->socket, &len, sizeof(int));
+    // allocate memory
     void* buffer = malloc(len);
+    // read actual data
     if (SDLNet_TCP_Recv(this->socket, buffer, len) < len) {
         throw NetworkError("SDLNet_TCP_Recv: " + std::string(SDLNet_GetError()));
     }

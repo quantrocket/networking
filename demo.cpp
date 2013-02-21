@@ -54,7 +54,7 @@ int main() {
     }
     // and handle it referring to it's actual kind
     if (b->event_id == TEST) {
-        Test* data = (Test*)b;
+        Test* data = static_cast<Test*>(b);
         std::cout << data->text << std::endl;
     }
 

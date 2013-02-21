@@ -71,9 +71,9 @@ template <typename Link> int trigger_recv(void* param);
  *  the given link and pushs it to the "incomming"-queue.
  *
  *  All queues are accessed thread-safe. All pushed Events must come from
- *  correct sub-event type to guarantee correct sending and receiving
- *  referring to network communication. All popped Events must be switch
- *  referring to it's event_id and casted to the correct sub-event type.
+ *  correct sub-event typed variables to guarantee correct sending and
+ *  receiving referring to network communication. All popped Events must be
+ *  switch referring to it's event_id and casted to the correct sub-event type.
  */
 template <typename Link>
 class EventSystem {
@@ -105,19 +105,19 @@ class EventSystem {
 
 
 template <typename Link> int trigger_send(void* param) {
-    EventSystem<Link>* system = (EventSystem<Link>*)param;
+    EventSystem<Link>* system = reinterpret_cast<EventSystem<Link>*>(param);
     system->send_all();
 }
 
 template <typename Link> int trigger_recv(void* param) {
-    EventSystem<Link>* system = (EventSystem<Link>*)param;
+    EventSystem<Link>* system = reinterpret_cast<EventSystem<Link>*>(param);
     system->recv_all();
 }
 
 template <typename Link>
-EventSystem<Link>::EventSystem(Link* link) {
-    this->link    = link;
-    this->running = (this->link != NULL);
+EventSystem<Link>::EventSystem(Link* link)
+    : link(link)
+    , running(link != NULL) {
     // start threads
     this->send_thread = SDL_CreateThread(trigger_send<Link>, (void*)this);
     this->recv_thread = SDL_CreateThread(trigger_recv<Link>, (void*)this);
@@ -162,7 +162,7 @@ void EventSystem<Link>::recv_all() {
         }
         // push to incomming queue
         SDL_LockMutex(this->in_lock);
-        this->incomming.push((Event*)next);
+        this->incomming.push(reinterpret_cast<Event*>(next));
         SDL_UnlockMutex(this->in_lock);
     }
 }
