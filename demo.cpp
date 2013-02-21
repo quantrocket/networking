@@ -28,56 +28,67 @@ struct Logout: Event {
     Logout(): Event(eventid::LOGOUT) {}
 };
 
-void handle_login(Login* data) {
-    std::cout << "IN  : " << data->username << "!" << std::endl;
-}
+namespace chat {
+    bool authed = false; // describes, whether user is authed or not
+    std::string username;
 
-void handle_message(Message* data) {
-    std::cout << ">>  : '" << data->text << "'" << std::endl;
-}
-
-void handle_logout(Logout* data) {
-    std::cout << "OUT : " << data->username << "!" << std::endl;
+    void login(Login* data) {
+        std::cout << "IN  : " << data->username << "!" << std::endl;
+        username = data->username;
+        authed = true;
+    }
+    void message(Message* data) {
+        std::cout << ">>  : '" << data->text << "'" << std::endl;
+    }
+    void logout(Logout* data) {
+        std::cout << "OUT : " << data->username << "!" << std::endl;
+        username = "";
+        authed = false;
+    }
 }
 
 int main() {
     EventPipe pipe;
-    // sending stuff
-    Login* login = new Login();
-    memcpy(login->username, "Tester", 7);
-    pipe.push(login);
-    // note: login should not be deleted here!
-    Message* message = new Message();
-    memcpy(message->text, "Hallo World & Good Night ;D", 28);
-    pipe.push(message);
-    Logout* logout = new Logout();
-    memcpy(logout->username, "Tester", 7);
-    pipe.push(logout);
-    
-    // receive
+    bool running = true;
     Event* got = NULL;
-    bool quit = false;
-    while (quit == false) {
+
+    while (running) {
+        // Handle Input Stuff
+        std::string input;
+        std::cin >> input;
+        if (!chat::authed) {
+            // handle input as login
+            Login* data = new Login();
+            memcpy(data->username, input.c_str(), 255);
+            pipe.push(data);
+        } else {
+            if (input == "/q") {
+                // handle input as logout
+                Logout* data = new Logout();
+                memcpy(data->username, chat::username.c_str(), 255);
+                pipe.push(data);
+            } else {
+                // handle input as message
+                Message* data = new Message();
+                memcpy(data->text, input.c_str(), 20000);
+                pipe.push(data);
+            }
+        }
+        // Handle Events
         got = pipe.pop();
         if (got == NULL) {
-            // skip blank event
             continue;
         }
         switch (got->event_id) {
             case eventid::LOGIN:
-                // handle event
-                handle_login((Login*)got);
-                // destroy event
-                delete got;
+                chat::login((Login*)got);
                 break;
             case eventid::MESSAGE:
-                handle_message((Message*)got);
-                delete got;
+                chat::message((Message*)got);
                 break;
             case eventid::LOGOUT:
-                handle_logout((Logout*)got);
-                delete got;
-                quit = true;
+                chat::logout((Logout*)got);
+                running = false;
                 break;
         }
     }

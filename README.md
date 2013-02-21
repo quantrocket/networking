@@ -8,9 +8,8 @@ Build with gcc:
 
 Scheduled Changes:
 ------------------
-	(1) Modify Demo: EventPipe using Threads (single-person "chat")
-	(2) Write some TCP-based Server-Client-Classes (using sdl_net)
-	(3) Modify Demo: 2-Person chat using Server-Client stuff
-
+	(1) Modify Demo using Threads (single-person "chat")
+	(2) Write some TCP-based Server-Client classes (using sdl_net)
+	(3) Send events using Server-Client classes
 
 
