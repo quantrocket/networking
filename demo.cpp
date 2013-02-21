@@ -12,7 +12,7 @@ namespace eventid {
 }
 
 struct Login: Event {
-    // usefull for sending via sdl (later)
+    // usefull for sending via TCP/UDP (later)
     char username[255];
     // make this event a LOGIN-event
     Login(): Event(eventid::LOGIN) {}
