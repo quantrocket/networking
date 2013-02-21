@@ -15,7 +15,7 @@ Building:
 
 To build the module and demo application using gcc you can use:
 
-	g++ -o demo src/*.cpp example/*.cpp demo.cpp -lSDL
+	g++ -o demo src/*.cpp demo.cpp -lSDL -lSDL_net
 
 I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
@@ -25,20 +25,6 @@ Scheduled Changes:
 
 Here are some ideas as my personal to-do-list:
 
-    - write some TCP-/UDP-based demo stuff using sdl_net
-    - implement a bidirectional network-based event-pipe class with:
-        - incomming, outgoing EventPipes and handling threads
-        - mode given in constructor (network::tcp, network::udp)
-        - methods to listen/open/close connection
-
-Later usage example:
-
-    BidirectionalNetworkPipe pipe;
-    /**
-        one internal thread: sending outgoing events to network
-        another internal thread: receiving incomming events from network
-     */
-    pipe.push(myEvent); // push it in outgoing EventPipe
-    otherEvent = pipe.pop(); // pop from internal incomming EventPipe
-    
+    - class UdpConnection (src/connection.hpp, src/connection.cpp)
+    - several tests
 
