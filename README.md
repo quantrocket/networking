@@ -25,8 +25,20 @@ Scheduled Changes:
 
 Here are some ideas as my personal to-do-list:
 
-    - write some TCP-/UDP-based stuff using sdl_net
-    
-    - modify example using networking
+    - write some TCP-/UDP-based demo stuff using sdl_net
+    - implement a bidirectional network-based event-pipe class with:
+        - incomming, outgoing EventPipes and handling threads
+        - mode given in constructor (network::tcp, network::udp)
+        - methods to listen/open/close connection
 
+Later usage example:
+
+    BidirectionalNetworkPipe pipe;
+    /**
+        one internal thread: sending outgoing events to network
+        another internal thread: receiving incomming events from network
+     */
+    pipe.push(myEvent); // push it in outgoing EventPipe
+    otherEvent = pipe.pop(); // pop from internal incomming EventPipe
+    
 
