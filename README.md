@@ -15,7 +15,7 @@ Building:
 
 To build the module and demo application using gcc you can use:
 
-	g++ -o demo src/*.cpp demo.cpp -lSDL -lSDL_net
+	g++ -o demo src/*.cpp demo.cpp -lSDL -lSDL_net --std=c++0x
 
 I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
@@ -23,8 +23,6 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 Scheduled Changes:
 ----------------
 
-Here are some ideas as my personal to-do-list:
+No ideas what to do next :(
 
-    - class UdpConnection (src/connection.hpp, src/connection.cpp)
-    - several tests
 
