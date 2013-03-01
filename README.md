@@ -23,6 +23,6 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 Scheduled Changes:
 ----------------
 
-No ideas what to do next :(
+    - larger demo application (multi-user chat with small gui)
 
 
