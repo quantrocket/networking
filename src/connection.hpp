@@ -32,6 +32,16 @@ class NetworkError: public std::exception {
         }
 };
 
+/// An exception class used in case of a broken connection
+class ConnectionBroken: public std::exception {
+    public:
+        ConnectionBroken() throw() {}
+        virtual ~ConnectionBroken() throw() {}
+        virtual const char* what() const throw() {
+            return "Connection is broken";
+        }
+};
+
 /// A host with ip and port number
 /**
  *  This structure is used to simplfy host resolve and getting hostname or
@@ -57,11 +67,12 @@ struct Host {
  *
  *  Additionally, there are template methods for sending and receiving.
  */
-class Link {        
+class Link {
     public:
         Host* host;
 
-        Link(Host* host=NULL) : host(host) {}
+        Link(Host* host=NULL);
+        virtual ~Link();
         virtual void send(void* data, int len) = 0;
         virtual void* receive() = 0;
         template <typename Data> void send(Data* data) {
@@ -85,6 +96,7 @@ class TcpLink: public Link {
     friend class TcpListener;
     protected:
         TCPsocket socket;
+        bool online;
     public:
         TcpLink();
         TcpLink(TCPsocket socket);
@@ -92,6 +104,7 @@ class TcpLink: public Link {
         void open(const std::string& host, unsigned short port);
         void close();
         TcpLink* accept();
+        bool isOnline();
         void send(void* data, int len);
         void* receive();
 };

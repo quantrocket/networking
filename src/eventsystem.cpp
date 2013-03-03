@@ -12,66 +12,79 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "eventsystem.hpp"
 
-int trigger_send(void* param) {
+int trigger_sender(void* param) {
     NetworkingQueue* system = reinterpret_cast<NetworkingQueue*>(param);
-    system->send_all();
-}
-
-int trigger_recv(void* param) {
-    NetworkingQueue* system = reinterpret_cast<NetworkingQueue*>(param);
-    system->recv_all();
-}
-
-NetworkingQueue::NetworkingQueue(Link* link)
-    : link(link)
-    , running(link != NULL) {
-    // start threads
-    this->send_thread = SDL_CreateThread(trigger_send, (void*)this);
-    this->recv_thread = SDL_CreateThread(trigger_recv, (void*)this);
-}
-
-NetworkingQueue::~NetworkingQueue() {
-    // cancel threads
-    SDL_KillThread(this->send_thread);
-    SDL_KillThread(this->recv_thread);
-    // note: link might be used outside -- should be deleted here
-}
-
-void NetworkingQueue::send_all() {
-    while (this->running) {
+    while (true) {
         // pop from outgoing queue
-        SDL_LockMutex(this->lock);
-        if (this->outgoing.empty()) {
-            SDL_UnlockMutex(this->lock);
+        SDL_LockMutex(system->lock);
+        if (system->outgoing.empty()) {
+            SDL_UnlockMutex(system->lock);
             SDL_Delay(15);
             continue;
         }
-        Event* next = this->outgoing.front();
-        this->outgoing.pop();
-        int size = this->size.front();
-        this->size.pop();
-        SDL_UnlockMutex(this->lock);
-        // send via link
-        this->link->send(next, size);
+        Event* next = system->outgoing.front();
+        system->outgoing.pop();
+        int size = system->size.front();
+        system->size.pop();
+        SDL_UnlockMutex(system->lock);
+        // push to network
+        try {
+            // send via link
+            system->link->send(next, size);
+        } catch (const ConnectionBroken e) {
+            delete next;
+            break;
+        }
+        delete next;
     }
+    system->running = false;
 }
 
-void NetworkingQueue::recv_all() {
-    while (this->running) {
-        // receive via link
-        void* next = this->link->receive();
+int trigger_receiver(void* param) {
+    NetworkingQueue* system = reinterpret_cast<NetworkingQueue*>(param);
+    while (true) {
+        // pop from networking
+        void* next = NULL;
+        try {
+            // receive via link
+            next = system->link->receive();
+        } catch (const ConnectionBroken e) {
+            break;
+        }
         if (next == NULL) {
             SDL_Delay(15);
             continue;
         }
         // push to incomming queue (already thread-safe)
-        this->incomming.push(reinterpret_cast<Event*>(next));
+        system->incomming.push(reinterpret_cast<Event*>(next));
     }
+    system->running = false;
+}
+
+NetworkingQueue::NetworkingQueue(Link* link)
+    : link(link) {
+    this->lock = SDL_CreateMutex();
+    // start threads
+    this->running = true;
+    this->sender_thread   = SDL_CreateThread(trigger_sender,   (void*)this);
+    this->receiver_thread = SDL_CreateThread(trigger_receiver, (void*)this);
+}
+
+NetworkingQueue::~NetworkingQueue() {
+    // cancel threads
+    SDL_KillThread(this->sender_thread);
+    SDL_KillThread(this->receiver_thread);
+    // note: link might be used outside -- should be deleted here
+    SDL_DestroyMutex(this->lock);
 }
 
 Event* NetworkingQueue::pop() {
     // pop from incomming queue (already thread-safe)
     return this->incomming.pop();
+}
+
+bool NetworkingQueue::isRunning() {
+    return this->running;
 }
 
 

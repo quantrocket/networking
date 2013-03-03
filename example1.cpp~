@@ -76,10 +76,6 @@ void tcp_demo() {
     }
     
     // cleaning up
-    delete a;
-    delete b;
-    delete c;
-    delete d;
     delete clientsided;
     delete serversided;
     // links closed automatically ;) 

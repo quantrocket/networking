@@ -12,8 +12,6 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "connection.hpp"
 
-#include <iostream>
-
 Host::Host(const std::string& host, unsigned short port)
     : addr(IPaddress()) {
     if (SDLNet_ResolveHost(&(this->addr), host.c_str(), port) == -1) {
@@ -52,14 +50,25 @@ unsigned short Host::port() {
 
 // ----------------------------------------------------------------------------
 
+Link::Link(Host* host)
+    : host(host) {
+}
+
+Link::~Link() {
+}
+
+// ----------------------------------------------------------------------------
+
 TcpLink::TcpLink()
     : Link(NULL)
-    , socket(NULL) {
+    , socket(NULL)
+    , online(false) {
 }
 
 TcpLink::TcpLink(TCPsocket socket)
     : Link(NULL)
-    , socket(socket) {
+    , socket(socket)
+    , online(true) {
     this->host = new Host(SDLNet_TCP_GetPeerAddress(socket));
 }
 
@@ -78,6 +87,7 @@ void TcpLink::open(const std::string& host, unsigned short port) {
     if (this->socket == NULL) {
         throw NetworkError("SDLNet_TCP_Open: " + std::string(SDLNet_GetError()));
     }
+    this->online = true;
 }
 
 void TcpLink::close() {
@@ -86,6 +96,7 @@ void TcpLink::close() {
     }
     SDLNet_TCP_Close(this->socket);
     delete this->host;
+    this->online = false;
     this->host = NULL;
 }
 
@@ -94,10 +105,16 @@ void TcpLink::send(void* data, int len) {
         throw NetworkError("TCP Socket not connected!");
     }
     // write byte amount
-    SDLNet_TCP_Send(this->socket, &len, sizeof(int));
+    int sent = SDLNet_TCP_Send(this->socket, &len, sizeof(int));
+    if (sent < sizeof(int)) {
+        this->online = false;
+        throw ConnectionBroken();
+    }
     // write actual data
-    if (SDLNet_TCP_Send(this->socket, data, len) < len) {
-        throw NetworkError("SDLNet_TCP_Send: " + std::string(SDLNet_GetError()));
+    sent = SDLNet_TCP_Send(this->socket, data, len);
+    if (sent < len) {
+        this->online = false;
+        throw ConnectionBroken();
     }
 }
 
@@ -107,12 +124,22 @@ void* TcpLink::receive() {
     }
     // read byte amount
     int len;
-    SDLNet_TCP_Recv(this->socket, &len, sizeof(int));
+    int read = SDLNet_TCP_Recv(this->socket, &len, sizeof(int));
+    if (read < 0) {
+        this->online = false;
+        throw ConnectionBroken();
+    } else if (read == 0) {
+        return NULL;
+    }
     // allocate memory
     void* buffer = malloc(len);
     // read actual data
-    if (SDLNet_TCP_Recv(this->socket, buffer, len) < len) {
-        throw NetworkError("SDLNet_TCP_Recv: " + std::string(SDLNet_GetError()));
+    read = SDLNet_TCP_Recv(this->socket, buffer, len);
+    if (read < 0) {
+        this->online = false;
+        throw ConnectionBroken();
+    } else if (read == 0) {
+        return NULL;
     }
     return buffer;
 }

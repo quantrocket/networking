@@ -26,10 +26,51 @@ namespace eventid {
 }
 
 /// Base Event
+/**
+ *  Events carry primitive data. Using pointers or high-level containers is
+ *  not allowed to guarantee to serialize events referring to socket
+ *  communication.
+ *  Each Event-derivation needs to have an own EventID. The EventID for
+ *  base events is eventid::GENERIC with value 0. Other EventIDs should use
+ *  a non-zero, signed short integer value.
+ *  A derived event needs to implement a constructor calling the base event's
+ *  constructor with the correct EventID. Also die copy-constructor should be
+ *  overwritten to guarantee coping events, e.g. for giving to multiple queues.
+ *
+ *  Here is an example about how to derive an Event:
+ *
+ *  namespace eventid {
+ *      const EventID MY_EVENT = 1;
+ *  }
+ *
+ *  struct MyEvent: Event {
+ *      char message[255];
+ *      int senderID;
+ *
+ *      MyEvent(const std::string& msg, int sndid)
+ *          : Event(eventid::MY_EVENT)
+ *          , senderID(sndid) {
+ *          // copy string into char array
+ *          memcpy(this->message, msg.c_str(), 255);
+ *      }
+ *
+ *      MyEvent(const MyEvent& other)
+ *          : Event(other.event_id)
+ *          , senderID(other.senderID) {
+ *          // copy char array
+ *          memcpy(this->message, other.message, 255);
+ *      }
+ *  };
+ */
 struct Event {
     EventID event_id;
-    Event(EventID event_id): event_id(event_id) {}
+    
+    // required to generate base events
     Event(): event_id(eventid::GENERIC) {}
+    // required to set correct id
+    Event(EventID event_id): event_id(event_id) {}
+    // required to copy events
+    Event(const Event& other): event_id(other.event_id) {}
 };
 
 /// Thread-Safe Queue
@@ -84,8 +125,8 @@ T* ThreadSafeQueue<T>::pop() {
 class EventQueue: public ThreadSafeQueue<Event> {};
 
 // thread helper functions
-int trigger_send(void* param);
-int trigger_recv(void* param);
+int trigger_sender(void* param);
+int trigger_receiver(void* param);
 
 /// Networking Event Queue
 /**
@@ -111,8 +152,8 @@ int trigger_recv(void* param);
  *  actual sub-event type.
  */
 class NetworkingQueue {
-    friend int trigger_send(void* param);
-    friend int trigger_recv(void* param);
+    friend int trigger_sender(void* param);
+    friend int trigger_receiver(void* param);
     protected:
         EventQueue incomming;
         // outgoing events 
@@ -122,26 +163,25 @@ class NetworkingQueue {
         // networking link
         Link* link;
         // threading stuff
+        SDL_Thread* sender_thread;
+        SDL_Thread* receiver_thread;
         bool running;
-        SDL_Thread* send_thread;
-        SDL_Thread* recv_thread;
-        void send_all();
-        void recv_all();
     public:
         NetworkingQueue(Link* link);
         ~NetworkingQueue();
         template <typename EventType> void push(EventType* event);
         Event* pop();
+        bool isRunning();
 };
 
 
 // EventType must be derived from Event
-template <typename EventType>
-void NetworkingQueue::push(EventType* event) {
+template <typename TEvent>
+void NetworkingQueue::push(TEvent* event) {
     // push data and size to outgoing queue
     SDL_LockMutex(this->lock);
     this->outgoing.push(event);
-    this->size.push(sizeof(EventType));
+    this->size.push(sizeof(TEvent));
     SDL_UnlockMutex(this->lock);
 }
 
