@@ -34,7 +34,7 @@ struct Message: Event {
     }
     Message(const Message& other)
         : Event(other.event_id) {
-        memcpy(this->message, other.message, 255);
+        memcpy(this->message, other.message, 20000);
     }
 };
 
