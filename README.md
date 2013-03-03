@@ -15,7 +15,7 @@ Building:
 
 To build the module and simple demo application using gcc you can use:
 
-	g++ -o demo src/*.cpp example1.cpp -lSDL -lSDL_net --std=c++0x
+    g++ -o demo src/*.cpp example1.cpp -lSDL -lSDL_net --std=c++0x
 
 To build the module and complex demo application using gcc you can use:
 
@@ -28,4 +28,10 @@ Scheduled Changes:
 ----------------
 
     - much more testing :D 
+    - extend server-client with udp stuff:
+        - server.enable_udp(port)
+        - server.disable_udp()
+        - tcp port given in constructor as before
+        --> tcp is always used, udp is optional
+    - worker can open udp connection to client after tcp acception
 
