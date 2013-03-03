@@ -27,6 +27,5 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 Scheduled Changes:
 ----------------
 
-    - larger demo application (multi-user chat with small gui)
-
+    - much more testing :D 
 
