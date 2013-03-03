@@ -158,7 +158,9 @@ int main(int argc, char **argv) {
             delete client;
             break;
         default:
-            std::cout << "Usage:\n\tdemo hostname port\t(start client)\n\tdemo port\t\t(start server)\n";
+            std::cout << "Usage:" << std::endl
+                      << "\tdemo hostname port\t(start client)" << std::endl
+                      << "\tdemo port\t\t(start server)" << std::endl;
             return EXIT_FAILURE;
     }
 
