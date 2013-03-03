@@ -1,8 +1,8 @@
 /*
 Copyright © 2013 Christian Glöckner <cgloeckner@freenet.de>
 
-This file is part of the EventSysteming module:
-    https://github.com/cgloeckner/EventSysteming
+This file is part of the networking module:
+    https://github.com/cgloeckner/networking
 
 It offers an event-based networking framework for games and other software.
 
