@@ -13,7 +13,8 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #ifndef CONNECTION_HPP
 #define CONNECTION_HPP
 
-#include <string>
+#include <iostream>
+
 #include <SDL/SDL_net.h>
 
 class TcpListener;
@@ -25,6 +26,7 @@ class NetworkError: public std::exception {
     public:
         NetworkError(const std::string& msg) throw() {
             this->msg = msg;
+            std::cout << "Networking error occured: " << this->msg << std::endl;
         }
         virtual ~NetworkError() throw() {}
         virtual const char* what() const throw() {
@@ -33,12 +35,17 @@ class NetworkError: public std::exception {
 };
 
 /// An exception class used in case of a broken connection
-class ConnectionBroken: public std::exception {
+class BrokenPipe: public std::exception {
+    protected:
+        std::string msg;
     public:
-        ConnectionBroken() throw() {}
-        virtual ~ConnectionBroken() throw() {}
+        BrokenPipe() throw() {
+            this->msg = "Broken pipe";
+            std::cout << "Networking error occured: " << this->msg << std::endl;
+        }
+        virtual ~BrokenPipe() throw() {}
         virtual const char* what() const throw() {
-            return "Connection is broken";
+            return this->msg.c_str();
         }
 };
 

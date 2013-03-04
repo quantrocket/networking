@@ -12,8 +12,6 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "connection.hpp"
 
-#include <iostream>
-
 Host::Host(const std::string& host, unsigned short port)
     : addr(IPaddress()) {
     if (SDLNet_ResolveHost(&(this->addr), host.c_str(), port) == -1) {
@@ -82,7 +80,8 @@ TcpLink::~TcpLink() {
 
 void TcpLink::open(const std::string& host, unsigned short port) {
     if (this->socket != NULL) {
-        throw NetworkError("TCP Socket already connected");
+        std::cout << "TCP Socket already connected" << std::endl;
+        return;
     }
     this->host = new Host(host, port);
     this->socket = SDLNet_TCP_Open(&(this->host->addr));
@@ -94,7 +93,8 @@ void TcpLink::open(const std::string& host, unsigned short port) {
 
 void TcpLink::close() {
     if (this->socket == NULL) {
-        throw NetworkError("TCP Socket already closed");
+        std::cout << "TCP Socket already closed" << std::endl;
+        return;
     }
     SDLNet_TCP_Close(this->socket);
     this->socket = NULL;
@@ -105,35 +105,40 @@ void TcpLink::close() {
 
 void TcpLink::send(void* data, int len) {
     if (this->socket == NULL) {
-        throw NetworkError("TCP Socket not connected!");
+        std::cout << "TCP Socket is not connected" << std::endl;
+        this->online = false;
+        throw BrokenPipe();
     }
     // write byte amount
     int expected = sizeof(int);
     int sent = SDLNet_TCP_Send(this->socket, &len, expected);
     if (sent < expected) {
         this->online = false;
-        throw ConnectionBroken();
+        throw BrokenPipe();
     }
     // write actual data
     sent = SDLNet_TCP_Send(this->socket, data, len);
     if (sent < len) {
         this->online = false;
-        throw ConnectionBroken();
+        throw BrokenPipe();
     }
 }
 
 void* TcpLink::receive() {
     if (this->socket == NULL) {
-        throw NetworkError("TCP Socket not connected");
+        std::cout << "TCP Socket is not connected" << std::endl;
+        this->online = false;
+        throw BrokenPipe();
     }
     // read byte amount
     int len;
     int read = SDLNet_TCP_Recv(this->socket, &len, sizeof(int));
     if (read <= 0) {
         this->online = false;
-        throw ConnectionBroken();
+        throw BrokenPipe();
     } else if (len == 0) {
-        std::cout << "Warning: Read zero size on socket " << this->socket << std::endl;
+        std::cout << "Package with zero size received from tcp socket of "
+                  << this->host->ip() << ":" << this->host->port() << std::endl;
         return NULL;
     }
     // allocate memory
@@ -142,7 +147,7 @@ void* TcpLink::receive() {
     read = SDLNet_TCP_Recv(this->socket, buffer, len);
     if (read <= 0) {
         this->online = false;
-        throw ConnectionBroken();
+        throw BrokenPipe();
     }
     return buffer;
 }
@@ -162,7 +167,8 @@ TcpListener::~TcpListener() {
 
 void TcpListener::open(unsigned short port) {
     if (this->socket != NULL) {
-        throw NetworkError("TCP Listener already listening");
+        std::cout << "TCP Listener already listening" << std::endl;
+        return;
     }
     Host host(port);
     this->socket = SDLNet_TCP_Open(&(host.addr));
@@ -173,7 +179,8 @@ void TcpListener::open(unsigned short port) {
 
 void TcpListener::close() {
     if (this->socket == NULL) {
-        throw NetworkError("TCP Listener already closed");
+        std::cout << "TCP Listener already closed" << std::endl;
+        return;
     }
     SDLNet_TCP_Close(this->socket);
     this->socket = NULL;
@@ -217,7 +224,8 @@ void UdpLink::setTarget(const std::string& host, unsigned short port) {
 
 void UdpLink::open(unsigned short port) {
     if (this->socket != NULL) {
-        throw NetworkError("UDP Socket already connected");
+        std::cout << "UDP Socket already connected" << std::endl;
+        return;
     }
     this->socket = SDLNet_UDP_Open(port);
     if (this->socket == NULL) {
@@ -227,7 +235,8 @@ void UdpLink::open(unsigned short port) {
 
 void UdpLink::close() {
     if (this->socket == NULL) {
-        throw NetworkError("UDP Socket already closed");
+        std::cout << "UDP Socket already closed" << std::endl;
+        return;
     }
     SDLNet_UDP_Close(this->socket);
     this->socket = NULL;
@@ -239,7 +248,8 @@ void UdpLink::close() {
 
 void UdpLink::send(void* data, int len) {
     if (this->socket == NULL) {
-        throw NetworkError("UDP Socket not connected!");
+        std::cout << "UDP Socket is not connected" << std::endl;
+        throw BrokenPipe();
     }
     // create package
     UDPpacket* packet = SDLNet_AllocPacket(this->max_size);
@@ -268,7 +278,8 @@ void* UdpLink::receive() {
     }
     while (!success) {
         if (this->socket == NULL) {
-            throw NetworkError("UDP Socket not connected!");
+            std::cout << "UDP Socket is not connected" << std::endl;
+            throw BrokenPipe();
         }
         // try to read package
         switch (SDLNet_UDP_Recv(this->socket, packet)) {

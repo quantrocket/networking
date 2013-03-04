@@ -212,9 +212,7 @@ int main(int argc, char **argv) {
             std::cout << "Usage:" << std::endl
                       << "\tdemo hostname port\t(start client)" << std::endl
                       << "\tdemo port\t\t(start server)" << std::endl;
-            return EXIT_FAILURE;
     }
-
 }
 
 

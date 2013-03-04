@@ -12,8 +12,6 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "client.hpp"
 
-#include <iostream>
-
 int client_handler(void* param) {
     BaseClient* client = (BaseClient*)param;
     // loop while connected to server's worker

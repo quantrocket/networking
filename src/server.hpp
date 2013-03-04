@@ -13,11 +13,12 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include "connection.hpp"
-#include "eventsystem.hpp"
-
 #include <list>
 #include <map>
+#include <iostream>
+
+#include "connection.hpp"
+#include "eventsystem.hpp"
 
 template <typename TWorker, typename TServer>
 int server_accepter(void* param);
@@ -87,11 +88,10 @@ void BaseServer<TWorker, TServer>::disjoin(unsigned int id) {
     auto node = this->workers.find(id);
     if (node != this->workers.end()) {
         // remove worker
-        //delete node->second;
+        delete node->second;
         this->workers.erase(node);
-        std::cout << "Removed Worker #" << id << std::endl;
     } else {
-        std::cout << "Unknown Worker #" << id << std::endl;
+        std::cout << "Unknown worker id #" << id << ". Disjoining ignored" << std::endl;
     }
     SDL_UnlockMutex(this->lock);
 }
@@ -165,7 +165,8 @@ void BaseServer<TWorker, TServer>::push(TEvent* event, unsigned int id) {
         node->second->push(event);
         // the pointer is automatically deleted after sending by the worker
     } else {
-        std::cout << "Unknown Worker #" << id << std::endl;
+        std::cout << "Unknown worker id #" << id
+                  << ". Disjoining pushing event" << std::endl;
     }
     SDL_UnlockMutex(this->lock);
 }

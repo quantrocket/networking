@@ -31,7 +31,7 @@ int trigger_sender(void* param) {
         try {
             // send via link
             system->link->send(next, size);
-        } catch (const ConnectionBroken e) {
+        } catch (const BrokenPipe e) {
             system->link->close();
             delete next;
             break;
@@ -50,7 +50,7 @@ int trigger_receiver(void* param) {
         try {
             // receive via link
             next = system->link->receive();
-        } catch (const ConnectionBroken e) {
+        } catch (const BrokenPipe e) {
             system->link->close();
             break;
         }
