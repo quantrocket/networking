@@ -22,8 +22,22 @@ http://creativecommons.org/licenses/by-nc/3.0/
 // ----------------------------------------------------------------------------
 
 namespace event_id {
-    const EventID MESSAGE = 1;
+    const EventID LOGIN   = 1;
+    const EventID LOGOUT  = 2;
+    const EventID MESSAGE = 3;
 }
+
+struct Login: Event {
+    Login()
+        : Event(event_id::LOGIN) {
+    }
+};
+
+struct Logout: Event {
+    Logout()
+        : Event(event_id::LOGOUT) {
+    }
+};
 
 struct Message: Event {
     char message[20000];
@@ -42,18 +56,17 @@ struct Message: Event {
 
 class Server;
 
-class Worker: public BaseWorker<Server, Worker> {
+class Worker: public BaseWorker<Server> {
     protected:
         void handle(Event* event);
         void onConnect();
         void onDisconnect();
     public:
-        Worker(TcpLink* link, Server* server);
+        Worker(unsigned int id, TcpLink* link, Server* server);
 };
 
 class Server: public BaseServer<Worker, Server> {
     protected:
-        void handle(Event* event);
         void onStart();
         void onStopp();
     public:
@@ -72,25 +85,29 @@ class Client: public BaseClient {
 // ----------------------------------------------------------------------------
 
 void Worker::handle(Event* event) {
-    Message* msg = (Message*)event;
-    std::cout << "Worker got: " << msg->message << std::endl;
+    if (event->event_id == event_id::MESSAGE) {
+        Message* msg = (Message*)event;
+        std::cout << "Worker #" << this->id << " got: " << msg->message << std::endl;
+    } else if (event->event_id == event_id::LOGIN) {
+        std::cout << "Worker #" << this->id << " got login" << std::endl;
+    } else if (event->event_id == event_id::LOGOUT) {
+        std::cout << "Worker #" << this->id << " got logout" << std::endl;
+        this->shutdown();
+    } else {
+        std::cout << "Worker #" << this->id << " got unknown event-id: #" << event->event_id << std::endl;
+    }
 }
 
 void Worker::onConnect() {
-    std::cout << "Worker connected" << std::endl;
+    std::cout << "Worker #" << this->id << " connected" << std::endl;
 }
 
 void Worker::onDisconnect() {
-    std::cout << "Worker disconnected" << std::endl;
+    std::cout << "Worker #" << this->id << " disconnected" << std::endl;
 }
 
-Worker::Worker(TcpLink* link, Server* server)
-    : BaseWorker<Server, Worker>(link, server) {
-}
-
-void Server::handle(Event* event) {
-    Message* msg = (Message*)event;
-    std::cout << "Server got: " << msg->message << std::endl;
+Worker::Worker(unsigned int id, TcpLink* link, Server* server)
+    : BaseWorker<Server>(id, link, server) {
 }
 
 void Server::onStart() {
@@ -106,8 +123,15 @@ Server::Server(unsigned short port)
 }
 
 void Client::handle(Event* event) {
-    Message* msg = (Message*)event;
-    std::cout << "Client got: " << msg->message << std::endl;
+    if (event->event_id == event_id::MESSAGE) {
+        Message* msg = (Message*)event;
+        std::cout << "Client got: " << msg->message << std::endl;
+    } else if (event->event_id == event_id::LOGOUT) {
+        std::cout << "Server forces client to logout" << std::endl;
+        this->shutdown();
+    } else {
+        std::cout << "unknown event-id: #" << event->event_id << std::endl;
+    }
 }
 
 void Client::onConnect() {
@@ -126,9 +150,12 @@ Client::Client(std::string hostname, unsigned short port)
 
 int main(int argc, char **argv) {
     std::string input;
+    std::string rest;
 
     Server* server = NULL;
     Client* client = NULL;
+    bool all = false;
+    unsigned int target = 0;
 
     switch (argc) {
         case 2:
@@ -136,18 +163,40 @@ int main(int argc, char **argv) {
             server->run();
             while (true) {
                 getline(std::cin, input);
+                if (input == "restart") {
+                    server->push(new Logout());
+                    server->shutdown();
+                    server->run();
+                    continue;
+                }
                 if (input == "quit") {
+                    server->push(new Logout());
+                    server->shutdown();
                     break;
                 }
-                // set message
-                server->push(new Message(input));
+                if (input[0] == 't' && input[1] == 'o') {
+                    // set new target
+                    rest = input.substr(3, input.size()-3);
+                    if (rest == "all") {
+                        all = true;
+                    } else {
+                        all = false;
+                        target = (unsigned int)(std::stoi(rest));
+                    }
+                } else if (target >= 0 && !all) {
+                    // set message
+                    server->push(new Message(input), target);
+                } else if (all) {
+                    server->push(new Message(input));
+                }
             }
             delete server;
             break;
         case 3:
             client = new Client(argv[1], (unsigned short)(atoi(argv[2])));
             client->run();
-            while (true) {
+            client->push(new Login());
+            while (client->running()) {
                 getline(std::cin, input);
                 if (input == "quit") {
                     break;
@@ -155,6 +204,8 @@ int main(int argc, char **argv) {
                 // set message
                 client->push(new Message(input));
             }
+            client->push(new Logout());
+            client->shutdown();
             delete client;
             break;
         default:

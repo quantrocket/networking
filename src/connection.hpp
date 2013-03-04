@@ -73,6 +73,7 @@ class Link {
 
         Link(Host* host=NULL);
         virtual ~Link();
+        virtual void close() = 0;
         virtual void send(void* data, int len) = 0;
         virtual void* receive() = 0;
         template <typename Data> void send(Data* data) {

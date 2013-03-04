@@ -13,6 +13,8 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #ifndef EVENTSYSTEM_HPP
 #define EVENTSYSTEM_HPP
 
+#define DELAY_ON_EMPTY 25
+
 #include <queue>
 #include <SDL/SDL.h>
 
@@ -89,6 +91,7 @@ class ThreadSafeQueue {
         virtual ~ThreadSafeQueue();
         void push(T* data);
         T* pop();
+        bool isEmpty();
 };
 
 template <typename T>
@@ -113,12 +116,18 @@ T* ThreadSafeQueue<T>::pop() {
     SDL_LockMutex(this->lock);
     if (this->data.empty()) {
         SDL_UnlockMutex(this->lock);
+        SDL_Delay(DELAY_ON_EMPTY);
         return NULL;
     }
     T* buffer = this->data.front();
     this->data.pop();
     SDL_UnlockMutex(this->lock);
     return buffer;
+}
+
+template <typename T>
+bool ThreadSafeQueue<T>::isEmpty() {
+    return this->data.empty();
 }
 
 /// Simple Event Queue
@@ -172,6 +181,7 @@ class NetworkingQueue {
         template <typename EventType> void push(EventType* event);
         Event* pop();
         bool isRunning();
+        bool isEmpty();
 };
 
 

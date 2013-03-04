@@ -12,6 +12,8 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "connection.hpp"
 
+#include <iostream>
+
 Host::Host(const std::string& host, unsigned short port)
     : addr(IPaddress()) {
     if (SDLNet_ResolveHost(&(this->addr), host.c_str(), port) == -1) {
@@ -95,6 +97,7 @@ void TcpLink::close() {
         throw NetworkError("TCP Socket already closed");
     }
     SDLNet_TCP_Close(this->socket);
+    this->socket = NULL;
     delete this->host;
     this->online = false;
     this->host = NULL;
@@ -105,8 +108,9 @@ void TcpLink::send(void* data, int len) {
         throw NetworkError("TCP Socket not connected!");
     }
     // write byte amount
-    int sent = SDLNet_TCP_Send(this->socket, &len, sizeof(int));
-    if (sent < sizeof(int)) {
+    int expected = sizeof(int);
+    int sent = SDLNet_TCP_Send(this->socket, &len, expected);
+    if (sent < expected) {
         this->online = false;
         throw ConnectionBroken();
     }
@@ -125,21 +129,20 @@ void* TcpLink::receive() {
     // read byte amount
     int len;
     int read = SDLNet_TCP_Recv(this->socket, &len, sizeof(int));
-    if (read < 0) {
+    if (read <= 0) {
         this->online = false;
         throw ConnectionBroken();
-    } else if (read == 0) {
+    } else if (len == 0) {
+        std::cout << "Warning: Read zero size on socket " << this->socket << std::endl;
         return NULL;
     }
     // allocate memory
     void* buffer = malloc(len);
     // read actual data
     read = SDLNet_TCP_Recv(this->socket, buffer, len);
-    if (read < 0) {
+    if (read <= 0) {
         this->online = false;
         throw ConnectionBroken();
-    } else if (read == 0) {
-        return NULL;
     }
     return buffer;
 }
@@ -173,6 +176,7 @@ void TcpListener::close() {
         throw NetworkError("TCP Listener already closed");
     }
     SDLNet_TCP_Close(this->socket);
+    this->socket = NULL;
 }
 
 TcpLink* TcpListener::accept() {
@@ -226,6 +230,7 @@ void UdpLink::close() {
         throw NetworkError("UDP Socket already closed");
     }
     SDLNet_UDP_Close(this->socket);
+    this->socket = NULL;
     if (this->host != NULL) {
         delete this->host;
         this->host = NULL;

@@ -19,7 +19,7 @@ int trigger_sender(void* param) {
         SDL_LockMutex(system->lock);
         if (system->outgoing.empty()) {
             SDL_UnlockMutex(system->lock);
-            SDL_Delay(15);
+            SDL_Delay(DELAY_ON_EMPTY);
             continue;
         }
         Event* next = system->outgoing.front();
@@ -32,12 +32,14 @@ int trigger_sender(void* param) {
             // send via link
             system->link->send(next, size);
         } catch (const ConnectionBroken e) {
+            system->link->close();
             delete next;
             break;
         }
         delete next;
     }
     system->running = false;
+    return 0;
 }
 
 int trigger_receiver(void* param) {
@@ -49,16 +51,18 @@ int trigger_receiver(void* param) {
             // receive via link
             next = system->link->receive();
         } catch (const ConnectionBroken e) {
+            system->link->close();
             break;
         }
         if (next == NULL) {
-            SDL_Delay(15);
+            SDL_Delay(DELAY_ON_EMPTY);
             continue;
         }
         // push to incomming queue (already thread-safe)
         system->incomming.push(reinterpret_cast<Event*>(next));
     }
     system->running = false;
+    return 0;
 }
 
 NetworkingQueue::NetworkingQueue(Link* link)
@@ -85,6 +89,10 @@ Event* NetworkingQueue::pop() {
 
 bool NetworkingQueue::isRunning() {
     return this->running;
+}
+
+bool NetworkingQueue::isEmpty() {
+    return this->outgoing.empty();
 }
 
 

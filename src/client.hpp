@@ -22,9 +22,10 @@ class BaseClient {
     friend int client_handler(void* param);
     protected:
         TcpLink link;
-        NetworkingQueue* queue;
+        NetworkingQueue* queue; // events to send
         SDL_Thread* handle_thread;
-        bool running;
+        bool _running;
+        SDL_mutex* lock; // for running
 
         /// Handle given event. The event should be deleted here after handling
         virtual void handle(Event* event) = 0;
@@ -38,6 +39,9 @@ class BaseClient {
         void shutdown();
         template <typename TEvent>
         void push(TEvent* event);
+        
+        void running(bool value);
+        bool running();
 };
 
 template <typename TEvent>
@@ -45,7 +49,6 @@ void BaseClient::push(TEvent* event) {
     this->queue->push(event);
 }
 
-// @todo: onDisconnect()
 
 #endif
 

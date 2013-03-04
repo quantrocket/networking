@@ -17,31 +17,26 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #include "eventsystem.hpp"
 
 #include <list>
+#include <map>
 
 template <typename TWorker, typename TServer>
 int server_accepter(void* param);
-
-template <typename TWorker, typename TServer>
-int server_handle(void* param);
 
 /// Typeparameter W for Worker Class
 template <typename TWorker, typename TServer>
 class BaseServer {
     friend int server_accepter<TWorker, TServer>(void* param);
-    friend int server_handle<TWorker, TServer>(void* param);
     protected:
         TcpListener listener;
-        std::list<TWorker*> workers;
+        std::map<unsigned int, TWorker*> workers;
+        unsigned int next_id;
         SDL_mutex* lock;
-        EventQueue queue;
         // threading stuff
         SDL_Thread* accept_thread;
         SDL_Thread* handle_thread;
         bool running;
         
-        void accept(TcpLink* link);
-        /// Handle given event. The event should be deleted here after handling
-        virtual void handle(Event* event) = 0;
+        void join(TcpLink* link);
         virtual void onStart() = 0;
         virtual void onStopp() = 0;
     public:
@@ -49,10 +44,14 @@ class BaseServer {
         virtual ~BaseServer();
         
         void run();
-        void halt(TWorker* worker);
+        void disjoin(unsigned int id);
         void shutdown();
+        
         template <typename TEvent>
         void push(TEvent* event);
+
+        template <typename TEvent>
+        void push(TEvent* event, unsigned int id);
 };
 
 // ----------------------------------------------------------------------------
@@ -63,59 +62,50 @@ int server_accepter(void* param) {
     while (server->running) {
         TcpLink* incomming = server->listener.accept();
         if (incomming == NULL) { continue; }
-        server->accept(incomming);        
+        server->join(incomming);        
     }
+    return 0;
 }
 
 template <typename TWorker, typename TServer>
-int server_handle(void* param) {
-    BaseServer<TWorker, TServer>* server = (BaseServer<TWorker, TServer>*)param;
-    while (server->running) {
-        // pop and handle event
-        Event* next = server->queue.pop();
-        if (next == NULL) { continue; }
-        server->handle(next);
-    }
-}
-
-template <typename TWorker, typename TServer>
-void BaseServer<TWorker, TServer>::accept(TcpLink* link) {
-    // create worker
-    TWorker* worker = new TWorker(link, (TServer*)this);
+void BaseServer<TWorker, TServer>::join(TcpLink* link) {
     SDL_LockMutex(this->lock);
-    this->workers.push_back(worker);
+    // create worker
+    unsigned id = this->next_id++;
+    TWorker* worker = new TWorker(id, link, (TServer*)this);
+    // add worker
+    this->workers[id] = worker;
     SDL_UnlockMutex(this->lock);
     // run worker
     worker->run();
 }
 
 template <typename TWorker, typename TServer>
-void BaseServer<TWorker, TServer>::halt(TWorker* worker) {
-    // stopp worker
-    worker->shutdown();
-    // remove worker   
-    SDL_LockMutex(this->lock); 
-    this->workers.remove(worker);
+void BaseServer<TWorker, TServer>::disjoin(unsigned int id) {
+    // search worker
+    SDL_LockMutex(this->lock);
+    auto node = this->workers.find(id);
+    if (node != this->workers.end()) {
+        // remove worker
+        //delete node->second;
+        this->workers.erase(node);
+        std::cout << "Removed Worker #" << id << std::endl;
+    } else {
+        std::cout << "Unknown Worker #" << id << std::endl;
+    }
     SDL_UnlockMutex(this->lock);
 }
 
 template <typename TWorker, typename TServer>
 BaseServer<TWorker, TServer>::BaseServer(unsigned short port)
-    : running(false) {
+    : next_id(0)
+    , running(false) {
     this->listener.open(port);
 }
 
 template <typename TWorker, typename TServer>
 BaseServer<TWorker, TServer>::~BaseServer() {
-    if (this->running) {
-        // kill threads
-        SDL_KillThread(this->accept_thread);
-        SDL_KillThread(this->handle_thread);
-    }
-    // kill all workers
-    for (auto node = this->workers.begin(); node != this->workers.end(); node++) {
-        delete *node;
-    }
+    this->shutdown();
     this->listener.close();
 }
 
@@ -125,10 +115,10 @@ void BaseServer<TWorker, TServer>::run() {
         // already running
         return;
     }
+    this->next_id = 0;
     this->running = true;
-    this->onStart();
     this->accept_thread = SDL_CreateThread(server_accepter<TWorker, TServer>, (void*)this);
-    this->handle_thread = SDL_CreateThread(server_handle<TWorker, TServer>,   (void*)this);
+    this->onStart();
 }
 
 template <typename TWorker, typename TServer>
@@ -137,12 +127,14 @@ void BaseServer<TWorker, TServer>::shutdown() {
         // not running
         return;
     }
+    // Wait for accepter thread (to away deadlock for worker lock)
     this->running = false;
-    // Wait for terminating threads (they should terminate very soon)
     SDL_WaitThread(this->accept_thread, NULL);
-    SDL_WaitThread(this->handle_thread, NULL);
     this->accept_thread = NULL;
-    this->handle_thread = NULL;
+    // Kill all worker threads
+    for (auto node = this->workers.begin(); node != this->workers.end(); node++) {
+        node->second->shutdown();
+    }
     this->onStopp();
 }
 
@@ -152,12 +144,30 @@ void BaseServer<TWorker, TServer>::push(TEvent* event) {
     SDL_LockMutex(this->lock);
     // push event to all workers
     for (auto node = this->workers.begin(); node != this->workers.end(); node++) {
-        // push copy using copy constructor
-        // (pointer automatically deleted after sending via link)
-        (*node)->push(new TEvent(*event));
+        // create copy using copy constructor
+        TEvent* copy = new TEvent(*event);
+        // push copy to worker
+        node->second->push(copy);
+        // the pointer is automatically deleted after sending by the worker
     }
     SDL_UnlockMutex(this->lock);
     delete event;
+}
+
+template <typename TWorker, typename TServer>
+template <typename TEvent>
+void BaseServer<TWorker, TServer>::push(TEvent* event, unsigned int id) {
+    SDL_LockMutex(this->lock);
+    // search worker
+    auto node = this->workers.find(id);
+    if (node != this->workers.end()) {
+        // send to worker
+        node->second->push(event);
+        // the pointer is automatically deleted after sending by the worker
+    } else {
+        std::cout << "Unknown Worker #" << id << std::endl;
+    }
+    SDL_UnlockMutex(this->lock);
 }
 
 

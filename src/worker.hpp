@@ -16,16 +16,17 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #include "connection.hpp"
 #include "eventsystem.hpp"
 
-template <typename TServer, typename TWorker>
+template <typename TServer>
 int worker_handler(void* param);
 
 /// Typeparameter TServer for Server
-template <typename TServer, typename TWorker>
+template <typename TServer>
 class BaseWorker {
-    friend int worker_handler<TServer, TWorker>(void* param);
+    friend int worker_handler<TServer>(void* param);
     protected:
+        unsigned int id;
         TcpLink* link;
-        NetworkingQueue* queue;
+        NetworkingQueue* queue; // received events
         TServer* server;
         SDL_Thread* handle_thread;
         bool running;
@@ -35,11 +36,12 @@ class BaseWorker {
         virtual void onConnect() = 0;
         virtual void onDisconnect() = 0;
     public:
-        BaseWorker(TcpLink* link, TServer* server);
+        BaseWorker(unsigned int id, TcpLink* link, TServer* server);
         virtual ~BaseWorker();
         
         void run();
         void shutdown();
+        unsigned int getId();
         
         template <typename TEvent>
         void push(TEvent* event);
@@ -47,66 +49,74 @@ class BaseWorker {
 
 // ----------------------------------------------------------------------------
 
-template <typename TServer, typename TWorker>
+template <typename TServer>
 int worker_handler(void* param) {
-    BaseWorker<TServer, TWorker>* worker = (BaseWorker<TServer, TWorker>*)param;
-    worker->onConnect();
+    BaseWorker<TServer>* worker = (BaseWorker<TServer>*)param;
     // loop while connected to client
-    while (worker->queue->isRunning()) {
+    while (worker->queue->isRunning() && worker->running) {
         // pop and handle event
         Event* next = worker->queue->pop();
         if (next == NULL) { continue; }
         worker->handle(next);
     }
-    // remove worker from server
-    worker->server->halt((TWorker*)worker);
-    worker->onDisconnect();
+    return 0;
 }
 
-template <typename TServer, typename TWorker>
-BaseWorker<TServer, TWorker>::BaseWorker(TcpLink* link, TServer* server)
-    : link(link)
+template <typename TServer>
+BaseWorker<TServer>::BaseWorker(unsigned int id, TcpLink* link, TServer* server)
+    : id(id)
+    , link(link)
     , server(server)
     , running(false) {
     this->queue = new NetworkingQueue(link);
 }
 
-template <typename TServer, typename TWorker>
-BaseWorker<TServer, TWorker>::~BaseWorker() {
-    // kill thread
-    SDL_KillThread(this->handle_thread);
+template <typename TServer>
+BaseWorker<TServer>::~BaseWorker() {
+    this->shutdown();
     delete this->queue;
     delete this->link;
 }
 
-template <typename TServer, typename TWorker>
-void BaseWorker<TServer, TWorker>::run() {
+template <typename TServer>
+void BaseWorker<TServer>::run() {
     if (this->running) {
         // already running
         return;
     }
     this->running = true;
-    this->handle_thread = SDL_CreateThread(worker_handler<TServer, TWorker>, (void*)this);
+    this->onConnect();
+    this->handle_thread = SDL_CreateThread(worker_handler<TServer>, (void*)this);
 }
 
-template <typename TServer, typename TWorker>
-void BaseWorker<TServer, TWorker>::shutdown() {
+template <typename TServer>
+void BaseWorker<TServer>::shutdown() {
     if (!this->running) {
         // not running
         return;
     }
+    // wait until outgoing queue is empty
+    while (!this->queue->isEmpty()) {
+        SDL_Delay(DELAY_ON_EMPTY);
+    }
+    // wait for thread
     this->running = false;
-    // Wait for thread (will terminate soon)
     SDL_WaitThread(this->handle_thread, NULL);
     this->handle_thread = NULL;
+    // remove worker from server
+    this->onDisconnect();
+    this->server->disjoin(this->id);
 }
 
-template <typename TServer, typename TWorker>
+template <typename TServer>
 template <typename TEvent>
-void BaseWorker<TServer, TWorker>::push(TEvent* event) {
+void BaseWorker<TServer>::push(TEvent* event) {
     this->queue->push(event);
 }
 
-// @todo: onDisconnect()
+template <typename TServer>
+unsigned int BaseWorker<TServer>::getId() {
+    return this->id;
+}
 
 #endif
