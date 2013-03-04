@@ -37,17 +37,6 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 Scheduled Changes:
 ----------------
 
-    - rework tcp send/receive referring to error handling
-        (this might be the reason for the following bug)
-    - fix bug:
-        server start
-        client 1 connect
-        client 2 connect
-        client 1 or 2 leaving
-        this client reconnecting
-        now the client cannot send/receive events
-        disconnecting and waiting a cuple of seconds often helps
-        -.-'
     - pure udp-based server-client (current server-client is pure tcp-based)
-
+    - much more detailed testing
 
