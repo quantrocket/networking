@@ -16,6 +16,8 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #define DELAY_ON_EMPTY 25
 
 #include <queue>
+#include <mutex>
+
 #include <SDL/SDL.h>
 
 #include "connection.hpp"
@@ -92,7 +94,8 @@ struct Event {
 template <typename T>
 class ThreadSafeQueue {
     private:
-        SDL_mutex* lock;
+        //SDL_mutex* lock;
+        std::mutex lock;
     protected:
         std::queue<T*> data;
     public:
@@ -104,33 +107,40 @@ class ThreadSafeQueue {
 };
 
 template <typename T>
-ThreadSafeQueue<T>::ThreadSafeQueue()
-    : lock(SDL_CreateMutex()) {
+ThreadSafeQueue<T>::ThreadSafeQueue() {
+    //: lock(NULL) {
+    //this->lock = SDL_CreateMutex();
 }
 
 template <typename T>
 ThreadSafeQueue<T>::~ThreadSafeQueue() {
-    SDL_DestroyMutex(this->lock);
+    //SDL_UnlockMutex(this->lock);
+    //SDL_DestroyMutex(this->lock);
 }
 
 template <typename T>
 void ThreadSafeQueue<T>::push(T* data) {
-    SDL_LockMutex(this->lock);
+    this->lock.lock();
+    //SDL_LockMutex(this->lock);
     this->data.push(data);
-    SDL_UnlockMutex(this->lock);
+    this->lock.unlock();
+    //SDL_UnlockMutex(this->lock);
 }
 
 template <typename T>
 T* ThreadSafeQueue<T>::pop() {
-    SDL_LockMutex(this->lock);
+    this->lock.lock();
+    //SDL_LockMutex(this->lock);
     if (this->data.empty()) {
-        SDL_UnlockMutex(this->lock);
+        this->lock.unlock();
+        //SDL_UnlockMutex(this->lock);
         SDL_Delay(DELAY_ON_EMPTY);
         return NULL;
     }
     T* buffer = this->data.front();
     this->data.pop();
-    SDL_UnlockMutex(this->lock);
+    this->lock.unlock();
+    //SDL_UnlockMutex(this->lock);
     return buffer;
 }
 
@@ -174,12 +184,6 @@ class NetworkingQueue {
     friend int trigger_receiver(void* param);
     protected:
         EventQueue incomming, outgoing;
-        /*
-        // outgoing events 
-        std::queue<Event*> outgoing;
-        std::queue<std::size_t> size;
-        SDL_mutex* lock;
-        */
         // networking link
         TcpLink* link;
         // threading stuff
@@ -199,13 +203,6 @@ class NetworkingQueue {
 // EventType must be derived from Event
 template <typename TEvent>
 void NetworkingQueue::push(TEvent* event) {
-    /*
-    // push data and size to outgoing queue
-    SDL_LockMutex(this->lock);
-    this->outgoing.push(event);
-    this->size.push(sizeof(TEvent));
-    SDL_UnlockMutex(this->lock);
-    */
     this->outgoing.push(event);
 }
 

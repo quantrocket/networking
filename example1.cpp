@@ -11,6 +11,7 @@ http://creativecommons.org/licenses/by-nc/3.0/
 */
 
 #include <iostream>
+#include <algorithm>
 
 #include "src/connection.hpp"
 #include "src/eventsystem.hpp"
@@ -24,7 +25,7 @@ struct Test: Event {
     Test(): Event(TEST) {
     }
     Test(std::string text): Event(TEST) {
-        memcpy(this->text, text.c_str(), 255);
+        memcpy(this->text, text.c_str(), std::min((int)(text.size()), 255));
     }
 };
 
@@ -43,9 +44,9 @@ void Event::toTcp(TcpLink* link, Event* event) {
 Event* Event::fromTcp(TcpLink* link) {
     Event* event = NULL;
     // receive event id
-    EventID* id = link->receive<EventID>();
+    EventID id = link->receive_copy<EventID>();
     // receive event
-    switch (*id) {
+    switch (id) {
         case TEST:
             event = link->receive<Test>();
             break;
@@ -73,33 +74,33 @@ void tcp_demo() {
     NetworkingQueue* clientsided = new NetworkingQueue(client);
     
     // the client can send a specialized event
-    Test* a = new Test("Hello World :)");
-    clientsided->push(a);
+    clientsided->push(new Test("Hello World :)"));
 
     // and the server can read the event
-    Event* b = NULL;
-    while (b == NULL) {
-        b = serversided->pop();
+    Event* a = NULL;
+    while (a == NULL) {
+        a = serversided->pop();
     }
     // and handle it referring to it's actual kind
-    if (b->event_id == TEST) {
-        Test* data = static_cast<Test*>(b);
+    if (a->event_id == TEST) {
+        Test* data = static_cast<Test*>(a);
         std::cout << "The client sent via tcp: " << data->text << std::endl;
+        delete a;
     }
     
     // now the server could answer
-    Test* c = new Test("How are you?");
-    serversided->push(c);
+    serversided->push(new Test("How are you?"));
     
     // and the client is able to read the event
-    Event* d = NULL;
-    while (d == NULL) {
-        d = clientsided->pop();
+    a = NULL;
+    while (a == NULL) {
+        a = clientsided->pop();
     }
     // and handle it referrint to it's actual kind
-    if (d->event_id == TEST) {
-        Test* data = static_cast<Test*>(d);
+    if (a->event_id == TEST) {
+        Test* data = static_cast<Test*>(a);
         std::cout << "The server send via tcp: " << data->text << std::endl;
+        delete a;
     }
     
     // cleaning up

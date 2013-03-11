@@ -130,12 +130,18 @@ class TcpLink: public Link {
                 this->online = false;
                 throw BrokenPipe();
             }
-            int sent = SDLNet_TCP_Send(this->socket, (void*)data, sizeof(Data));
+            int sent = SDLNet_TCP_Send(this->socket, data, sizeof(Data));
             if (sent < sizeof(Data)) {
                 // error while sending
                 this->online = false;
                 throw BrokenPipe();
             }
+        }
+        template <typename Data> Data receive_copy() {
+            Data* buffer = this->receive<Data>();
+            Data data = Data(*buffer);
+            delete buffer;
+            return data;
         }
         template <typename Data> Data* receive() {
             if (this->socket == NULL) {
@@ -144,7 +150,8 @@ class TcpLink: public Link {
                 throw BrokenPipe();
             }
             Data* buffer = new Data();
-            int read = SDLNet_TCP_Recv(this->socket, (void*)buffer, sizeof(Data));
+            // @todo: make non-blocking : http://sdl.beuc.net/sdl.wiki/SDLNet_TCP_Recv 
+            int read = SDLNet_TCP_Recv(this->socket, buffer, sizeof(Data));
             if (read <= 0) {
                 // error while receiving
                 delete buffer;
@@ -152,7 +159,7 @@ class TcpLink: public Link {
                 throw BrokenPipe();
             }
             return buffer;
-        }        
+        }     
 };
 
 /// A listener class for TCP links
