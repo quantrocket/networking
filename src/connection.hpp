@@ -67,10 +67,12 @@ struct Host {
 
 // walkaround: cannot implement virtual template
 // send- / receive-methods for link class
+/*
 typedef unsigned short LinkType;
 const LinkType UNKNOWN = 0;
 const LinkType TCP     = 1;
 const LinkType UDP     = 2;
+*/
 
 /// An abstract class for network communication
 /**
@@ -87,7 +89,7 @@ class Link {
         
         // walkaround: cannot implement virtual template
         // send- / receive-methods for link class
-        LinkType linktype;
+        //LinkType linktype;
 
         Link(Host* host=NULL);
         virtual ~Link();
@@ -118,8 +120,10 @@ class TcpLink: public Link {
         void close();
         TcpLink* accept();
         bool isOnline();
-        /*void send(void* data, std::size_t len);
-        void* receive();*/
+
+        template <typename Data> void send(void* data) {
+            this->send<Data>((Data*)data);
+        }
         template <typename Data> void send(Data* data) {
             if (this->socket == NULL) {
                 // tcp socket is not connected
@@ -193,6 +197,7 @@ class TcpListener {
  *  Both sender and receiver should use the same value to avoid data loss.
  *  Default value is 1 megabyte.
  */
+/*
 class UdpLink: public Link {
     protected:
         UDPsocket socket;
@@ -206,6 +211,7 @@ class UdpLink: public Link {
         void send(void* data, std::size_t len);
         void* receive();
         */
+        /*
         template <typename Data> void send(Data* data) {
             if (this->socket == NULL) {
                 // udp socket is not connected
@@ -264,7 +270,7 @@ class UdpLink: public Link {
             }
             return buffer;
         }
-};
+};*/
 
 
 #endif

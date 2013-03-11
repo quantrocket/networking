@@ -42,6 +42,9 @@ struct Logout: Event {
 struct Message: Event {
     char message[20000];
 
+    Message()
+        : Event(event_id::MESSAGE) {
+    }
     Message(std::string message)
         : Event(event_id::MESSAGE) {
         memcpy(this->message, message.c_str(), 20000);
@@ -51,6 +54,43 @@ struct Message: Event {
         memcpy(this->message, other.message, 20000);
     }
 };
+
+void Event::toTcp(TcpLink* link, Event* event) {
+    // send event id
+    EventID id = event->event_id;
+    link->send<EventID>(&id);
+    // send event data
+    switch (id) {
+        case event_id::LOGIN:
+            link->send<Login>(event);
+            break;
+        case event_id::LOGOUT:
+            link->send<Logout>(event);
+            break;
+        case event_id::MESSAGE:
+            link->send<Message>(event);
+            break;
+    }
+}
+
+Event* Event::fromTcp(TcpLink* link) {
+    Event* event = NULL;
+    // receive event id
+    EventID* id = link->receive<EventID>();
+    // receive event
+    switch (*id) {
+        case event_id::LOGIN:
+            event = link->receive<Login>();
+            break;
+        case event_id::LOGOUT:
+            event = link->receive<Logout>();
+            break;
+        case event_id::MESSAGE:
+            event = link->receive<Message>();
+            break;
+    }
+    return event;
+}
 
 // ----------------------------------------------------------------------------
 

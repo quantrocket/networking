@@ -35,19 +35,7 @@ void Event::toTcp(TcpLink* link, Event* event) {
     // send event data
     switch (id) {
         case TEST:
-            link->send<Test>((Test*)event);
-            break;
-    }
-}
-
-void Event::toUdp(UdpLink* link, Event* event) {
-    // send event id
-    EventID id = event->event_id;
-    link->send<EventID>(&id);
-    // send event data
-    switch (id) {
-        case TEST:
-            link->send<Test>((Test*)event);
+            link->send<Test>(event);
             break;
     }
 }
@@ -55,22 +43,9 @@ void Event::toUdp(UdpLink* link, Event* event) {
 Event* Event::fromTcp(TcpLink* link) {
     Event* event = NULL;
     // receive event id
-    EventID id = *(link->receive<EventID>());
+    EventID* id = link->receive<EventID>();
     // receive event
-    switch (id) {
-        case TEST:
-            event = link->receive<Test>();
-            break;
-    }
-    return event;
-}
-
-Event* Event::fromUdp(UdpLink* link) {
-    Event* event = NULL;
-    // receive event id
-    EventID id = *(link->receive<EventID>());
-    // receive event
-    switch (id) {
+    switch (*id) {
         case TEST:
             event = link->receive<Test>();
             break;
@@ -136,6 +111,7 @@ void tcp_demo() {
     delete server;
 }
 
+/*
 void udp_demo() {
     std::cout << "== UDP-based demo ==" << std::endl;
     
@@ -204,10 +180,11 @@ void udp_demo() {
     delete client;
     delete server;
 }
+*/
 
 int main() {
     tcp_demo();
-    udp_demo();
+    //udp_demo();
 }
 
 
