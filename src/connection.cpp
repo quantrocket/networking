@@ -13,28 +13,29 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #include "connection.hpp"
 
 Host::Host(const std::string& host, unsigned short port)
-    : addr(IPaddress()) {
-    if (SDLNet_ResolveHost(&(this->addr), host.c_str(), port) == -1) {
+    : addr(new IPaddress()) {
+    if (SDLNet_ResolveHost(this->addr, host.c_str(), port) == -1) {
         throw NetworkError("SDLNet_ResolveHost: " + std::string(SDLNet_GetError()));
     }
 }
 
 Host::Host(unsigned short port)
-    : addr(IPaddress()) {
-    if (SDLNet_ResolveHost(&(this->addr), NULL, port) == -1) {
+    : addr(new IPaddress()) {
+    if (SDLNet_ResolveHost(this->addr, NULL, port) == -1) {
         throw NetworkError("SDLNet_ResolveHost: " + std::string(SDLNet_GetError()));
     }
 }
 
 Host::Host(IPaddress* addr)
-    : addr(*addr) {
+    : addr(addr) {
 }
 
 Host::~Host() {
+    delete this->addr;
 }
 
 std::string Host::ip() {
-    Uint32 number = SDLNet_Read32(&(this->addr.host));
+    Uint32 number = SDLNet_Read32(&(this->addr->host));
     int a, b, c, d;
     a = (number & 0xFF000000) >> 24;
     b = (number & 0x00FF0000) >> 16;
@@ -45,7 +46,7 @@ std::string Host::ip() {
 }
 
 unsigned short Host::port() {
-    return SDLNet_Read16(&(this->addr.port));
+    return SDLNet_Read16(&(this->addr->port));
 }
 
 // ----------------------------------------------------------------------------
@@ -87,7 +88,7 @@ void TcpLink::open(const std::string& host, unsigned short port) {
         return;
     }
     this->host = new Host(host, port);
-    this->socket = SDLNet_TCP_Open(&(this->host->addr));
+    this->socket = SDLNet_TCP_Open(this->host->addr);
     if (this->socket == NULL) {
         throw NetworkError("SDLNet_TCP_Open: " + std::string(SDLNet_GetError()));
     }
@@ -104,6 +105,10 @@ void TcpLink::close() {
     delete this->host;
     this->online = false;
     this->host = NULL;
+}
+
+bool TcpLink::isOnline() {
+    return this->online;
 }
 
 /*
@@ -178,7 +183,7 @@ void TcpListener::open(unsigned short port) {
         return;
     }
     Host host(port);
-    this->socket = SDLNet_TCP_Open(&(host.addr));
+    this->socket = SDLNet_TCP_Open(host.addr);
     if (this->socket == NULL) {
         throw NetworkError("SDLNet_TCP_Open: " + std::string(SDLNet_GetError()));
     }

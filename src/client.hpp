@@ -23,22 +23,21 @@ class BaseClient {
     protected:
         TcpLink link;
         NetworkingQueue* queue; // events to send
-        SDL_Thread* handle_thread;
+        SDL_Thread* thread;
         bool _running;
         SDL_mutex* lock; // for running
 
-        /// Handle given event. The event should be deleted here after handling
-        virtual void handle(Event* event) = 0;
         virtual void onConnect() = 0;
+        virtual void onEvent(Event* event) = 0;
         virtual void onDisconnect() = 0;
     public:
         BaseClient(std::string hostname, unsigned short port);
         virtual ~BaseClient();
         
-        void run();
-        void shutdown();
-        template <typename TEvent>
-        void push(TEvent* event);
+        void start();
+        void stop();
+
+        template <typename TEvent> void push(TEvent* event);
         
         void running(bool value);
         bool running();

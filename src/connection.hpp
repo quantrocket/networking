@@ -55,7 +55,7 @@ class BrokenPipe: public std::exception {
  *  port number in an easier way.
  */
 struct Host {
-    IPaddress addr;
+    IPaddress* addr;
     
     Host(const std::string& host, unsigned short port);
     Host(unsigned short port);
@@ -137,12 +137,6 @@ class TcpLink: public Link {
                 throw BrokenPipe();
             }
         }
-        template <typename Data> Data receive_copy() {
-            Data* buffer = this->receive<Data>();
-            Data data = Data(*buffer);
-            delete buffer;
-            return data;
-        }
         template <typename Data> Data* receive() {
             if (this->socket == NULL) {
                 // tcp socket is not connected
@@ -150,7 +144,6 @@ class TcpLink: public Link {
                 throw BrokenPipe();
             }
             Data* buffer = new Data();
-            // @todo: make non-blocking : http://sdl.beuc.net/sdl.wiki/SDLNet_TCP_Recv 
             int read = SDLNet_TCP_Recv(this->socket, buffer, sizeof(Data));
             if (read <= 0) {
                 // error while receiving

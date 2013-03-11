@@ -16,7 +16,6 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #define DELAY_ON_EMPTY 25
 
 #include <queue>
-#include <mutex>
 
 #include <SDL/SDL.h>
 
@@ -94,8 +93,7 @@ struct Event {
 template <typename T>
 class ThreadSafeQueue {
     private:
-        //SDL_mutex* lock;
-        std::mutex lock;
+        SDL_mutex* lock;
     protected:
         std::queue<T*> data;
     public:
@@ -107,40 +105,34 @@ class ThreadSafeQueue {
 };
 
 template <typename T>
-ThreadSafeQueue<T>::ThreadSafeQueue() {
-    //: lock(NULL) {
-    //this->lock = SDL_CreateMutex();
+ThreadSafeQueue<T>::ThreadSafeQueue()
+    : lock(NULL) {
+    this->lock = SDL_CreateMutex();
 }
 
 template <typename T>
 ThreadSafeQueue<T>::~ThreadSafeQueue() {
-    //SDL_UnlockMutex(this->lock);
-    //SDL_DestroyMutex(this->lock);
+    SDL_DestroyMutex(this->lock);
 }
 
 template <typename T>
 void ThreadSafeQueue<T>::push(T* data) {
-    this->lock.lock();
-    //SDL_LockMutex(this->lock);
+    SDL_LockMutex(this->lock);
     this->data.push(data);
-    this->lock.unlock();
-    //SDL_UnlockMutex(this->lock);
+    SDL_UnlockMutex(this->lock);
 }
 
 template <typename T>
 T* ThreadSafeQueue<T>::pop() {
-    this->lock.lock();
-    //SDL_LockMutex(this->lock);
+    SDL_LockMutex(this->lock);
     if (this->data.empty()) {
-        this->lock.unlock();
-        //SDL_UnlockMutex(this->lock);
+        SDL_UnlockMutex(this->lock);
         SDL_Delay(DELAY_ON_EMPTY);
         return NULL;
     }
     T* buffer = this->data.front();
     this->data.pop();
-    this->lock.unlock();
-    //SDL_UnlockMutex(this->lock);
+    SDL_UnlockMutex(this->lock);
     return buffer;
 }
 
@@ -195,7 +187,6 @@ class NetworkingQueue {
         ~NetworkingQueue();
         template <typename EventType> void push(EventType* event);
         Event* pop();
-        bool isRunning();
         bool isEmpty();
 };
 

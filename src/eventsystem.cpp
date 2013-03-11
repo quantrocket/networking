@@ -17,8 +17,12 @@ int trigger_sender(void* param) {
     while (system->running) {
         Event* buffer = system->outgoing.pop();
         if (buffer != NULL) {
-            Event::toTcp(system->link, buffer);
-            delete buffer;
+            try {
+                Event::toTcp(system->link, buffer);
+                delete buffer;
+            } catch (const BrokenPipe& e) {
+                system->running = false;
+            }
         }
     }
     return 0;
@@ -28,7 +32,11 @@ int trigger_receiver(void* param) {
     NetworkingQueue* system = reinterpret_cast<NetworkingQueue*>(param);
     while (system->running) {
         Event* buffer = NULL;
-        buffer = Event::fromTcp(system->link);
+        try {
+            buffer = Event::fromTcp(system->link);
+        } catch (const BrokenPipe& e) {
+            system->running = false;
+        }
         if (buffer != NULL) {
             system->incomming.push(buffer);
         }
@@ -47,6 +55,7 @@ NetworkingQueue::NetworkingQueue(TcpLink* link)
 NetworkingQueue::~NetworkingQueue() {
     // cancel threads
     this->running = false;
+    this->link->close();
     SDL_WaitThread(this->sender_thread, NULL);
     SDL_WaitThread(this->receiver_thread, NULL);
     // note: link might be used outside -- should be deleted here
@@ -55,10 +64,6 @@ NetworkingQueue::~NetworkingQueue() {
 Event* NetworkingQueue::pop() {
     // pop from incomming queue (already thread-safe)
     return this->incomming.pop();
-}
-
-bool NetworkingQueue::isRunning() {
-    return this->running;
 }
 
 bool NetworkingQueue::isEmpty() {

@@ -11,7 +11,6 @@ http://creativecommons.org/licenses/by-nc/3.0/
 */
 
 #include <iostream>
-#include <algorithm>
 
 #include "src/connection.hpp"
 #include "src/eventsystem.hpp"
@@ -25,7 +24,7 @@ struct Test: Event {
     Test(): Event(TEST) {
     }
     Test(std::string text): Event(TEST) {
-        memcpy(this->text, text.c_str(), std::min((int)(text.size()), 255));
+        memcpy(this->text, text.c_str(), 255);
     }
 };
 
@@ -44,13 +43,14 @@ void Event::toTcp(TcpLink* link, Event* event) {
 Event* Event::fromTcp(TcpLink* link) {
     Event* event = NULL;
     // receive event id
-    EventID id = link->receive_copy<EventID>();
+    EventID* id = link->receive<EventID>();
     // receive event
-    switch (id) {
+    switch (*id) {
         case TEST:
             event = link->receive<Test>();
             break;
     }
+    delete id;
     return event;
 }
 
