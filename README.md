@@ -18,9 +18,11 @@ Events mustn't contain pointers or other high-level data which are based on poin
 UDP support is currently deactivated because of some rough changes of the internals. I'm not shure whether I already need UDP, so it will be disabled for a while.
 
 To customize sending / receiving events you need to implement the static Event-methods
+
     void toTcp(TcpLink* link, Event* event);
-and
     static Event* fromTcp(TcpLink* link);
+
+They are called by the NetworkingQueue each time the system tries to send or receive an event using a TCP-Link.
 
 
 Building:
