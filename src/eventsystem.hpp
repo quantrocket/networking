@@ -76,10 +76,12 @@ struct Event {
     
     // walkaround: cannot implement virtual template
     // send- / receive-methods for link class
+    /*
+    template <typename TLink> static void toLink(TLink* link, Event* event);
+    template <typename TLink> static Event* fromLink(TLink* link);
+    */
     static void toTcp(TcpLink* link, Event* event);
-    static void toUdp(UdpLink* link, Event* event);
     static Event* fromTcp(TcpLink* link);
-    static Event* fromUdp(UdpLink* link);
 };
 
 /// Thread-Safe Queue
@@ -179,13 +181,13 @@ class NetworkingQueue {
         SDL_mutex* lock;
         */
         // networking link
-        Link* link;
+        TcpLink* link;
         // threading stuff
         SDL_Thread* sender_thread;
         SDL_Thread* receiver_thread;
         bool running;
     public:
-        NetworkingQueue(Link* link);
+        NetworkingQueue(TcpLink* link);
         ~NetworkingQueue();
         template <typename EventType> void push(EventType* event);
         Event* pop();

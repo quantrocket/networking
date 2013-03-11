@@ -17,40 +17,19 @@ int trigger_sender(void* param) {
     while (true) {
         Event* buffer = system->outgoing.pop();
         if (buffer != NULL) {
+            /*
             switch (system->link->linktype) {
                 case TCP:
-                    Event::toTcp((TcpLink*)(system->link), buffer);
+                    Event::toLink<TcpLink>((TcpLink*)(system->link), buffer);
                     break;
                 case UDP:
-                    Event::toUdp((UdpLink*)(system->link), buffer);
+                    Event::toLink<UdpLink>((UdpLink*)(system->link), buffer);
                     break;
             }
+            */
+            Event::toTcp(system->link, buffer);
             delete buffer;
         }
-        /*
-        // pop from outgoing queue
-        SDL_LockMutex(system->lock);
-        if (system->outgoing.empty()) {
-            SDL_UnlockMutex(system->lock);
-            SDL_Delay(DELAY_ON_EMPTY);
-            continue;
-        }
-        Event* next = system->outgoing.front();
-        system->outgoing.pop();
-        int size = system->size.front();
-        system->size.pop();
-        SDL_UnlockMutex(system->lock);
-        // push to network
-        try {
-            // send via link
-            system->link->send(next, size);
-        } catch (const BrokenPipe e) {
-            system->link->close();
-            delete next;
-            break;
-        }
-        delete next;
-        */
     }
     system->running = false;
     return 0;
@@ -60,49 +39,26 @@ int trigger_receiver(void* param) {
     NetworkingQueue* system = reinterpret_cast<NetworkingQueue*>(param);
     while (true) {
         Event* buffer = NULL;
+        /*
         switch (system->link->linktype) {
             case TCP:
-                buffer = Event::fromTcp((TcpLink*)(system->link));
+                buffer = Event::fromLink<TcpLink>((TcpLink*)(system->link));
                 break;
             case UDP:
-                buffer = Event::fromUdp((UdpLink*)(system->link));
+                buffer = Event::fromLink<UdpLink>((UdpLink*)(system->link));
                 break;
         }
+        */
+        buffer = Event::fromTcp(system->link);
         if (buffer != NULL) {
             system->incomming.push(buffer);
         }
-        /*
-        // pop from networking
-        void* next = NULL;
-        std::size_t size = 0;
-        try {
-            // receive size
-            size = system->link->receive<std::size_t>();
-            
-            // receive event
-            next = system->link->receive();
-        } catch (const BrokenPipe e) {
-            system->link->close();
-            free(next);
-            break;
-        }
-        if (next == NULL) {
-            SDL_Delay(DELAY_ON_EMPTY);
-            continue;
-        }
-        // push to incomming queue (already thread-safe)
-        std::size_t len = system->link->last_len;
-        Event* event = (Event*)(::operator new(len));
-        memcpy(event, next, len);
-        free(next);
-        system->incomming.push(event);
-        */
     }
     system->running = false;
     return 0;
 }
 
-NetworkingQueue::NetworkingQueue(Link* link)
+NetworkingQueue::NetworkingQueue(TcpLink* link)
     : link(link) {
     //this->lock = SDL_CreateMutex();
     // start threads

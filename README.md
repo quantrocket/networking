@@ -15,6 +15,13 @@ Limitations:
 
 Events mustn't contain pointers or other high-level data which are based on pointers. This limitation is founded in the easy way the system is sending and receiving data over the network. There is no serialization of given events. Therefore each event has to use primitive value types only. Remember to serialize and unserialize all data on your own before inserting these data into your derived event.
 
+UDP support is currently deactivated because of some rough changes of the internals. I'm not shure whether I already need UDP, so it will be disabled for a while.
+
+To customize sending / receiving events you need to implement the static Event-methods
+    void toTcp(TcpLink* link, Event* event);
+and
+    static Event* fromTcp(TcpLink* link);
+
 
 Building:
 --------
@@ -33,11 +40,9 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 Scheduled Changes:
 ----------------
 
-    pure udp-based server-client (current server-client is pure tcp-based)
-
-    much more detailed testing
-
-    client-client architecture
+    host-to-host architecture
+    
+    much more detailed testing (e.g. for memory leaks)
 
     virtual void Event::serialize() und virtual bool Event::deserialize()
 

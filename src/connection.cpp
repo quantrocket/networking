@@ -52,7 +52,7 @@ unsigned short Host::port() {
 
 Link::Link(Host* host)
     : host(host)
-    , linktype(UNKNOWN) {
+    /*, linktype(UNKNOWN)*/ {
 }
 
 Link::~Link() {
@@ -64,14 +64,14 @@ TcpLink::TcpLink()
     : Link(NULL)
     , socket(NULL)
     , online(false) {
-    this->linktype = TCP;
+    //this->linktype = TCP;
 }
 
 TcpLink::TcpLink(TCPsocket socket)
     : Link(NULL)
     , socket(socket)
     , online(true) {
-    this->linktype = TCP;
+    //this->linktype = TCP;
     this->host = new Host(SDLNet_TCP_GetPeerAddress(socket));
 }
 
@@ -204,6 +204,7 @@ TcpLink* TcpListener::accept() {
     return new TcpLink(tmp);
 }
 
+/*
 // ---------------------------------------------------------------------------- 
 
 UdpLink::UdpLink()
@@ -248,6 +249,7 @@ void UdpLink::close() {
         this->host = NULL;
     }
 }
+*/
 
 /*
 void UdpLink::send(void* data, std::size_t len) {
