@@ -73,6 +73,13 @@ struct Event {
     Event(EventID event_id): event_id(event_id) {}
     // required to copy events
     Event(const Event& other): event_id(other.event_id) {}
+    
+    // walkaround: cannot implement virtual template
+    // send- / receive-methods for link class
+    static void toTcp(TcpLink* link, Event* event);
+    static void toUdp(UdpLink* link, Event* event);
+    static Event* fromTcp(TcpLink* link);
+    static Event* fromUdp(UdpLink* link);
 };
 
 /// Thread-Safe Queue
@@ -164,11 +171,13 @@ class NetworkingQueue {
     friend int trigger_sender(void* param);
     friend int trigger_receiver(void* param);
     protected:
-        EventQueue incomming;
+        EventQueue incomming, outgoing;
+        /*
         // outgoing events 
         std::queue<Event*> outgoing;
         std::queue<std::size_t> size;
         SDL_mutex* lock;
+        */
         // networking link
         Link* link;
         // threading stuff
@@ -188,12 +197,14 @@ class NetworkingQueue {
 // EventType must be derived from Event
 template <typename TEvent>
 void NetworkingQueue::push(TEvent* event) {
+    /*
     // push data and size to outgoing queue
     SDL_LockMutex(this->lock);
     this->outgoing.push(event);
     this->size.push(sizeof(TEvent));
     SDL_UnlockMutex(this->lock);
+    */
+    this->outgoing.push(event);
 }
-
 
 #endif

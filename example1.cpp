@@ -21,8 +21,62 @@ const EventID TEST = 1;
 // a specialized event
 struct Test: Event {
     char text[255];
-    Test(): Event(TEST) {}
+    Test(): Event(TEST) {
+    }
+    Test(std::string text): Event(TEST) {
+        memcpy(this->text, text.c_str(), 255);
+    }
 };
+
+void Event::toTcp(TcpLink* link, Event* event) {
+    // send event id
+    EventID id = event->event_id;
+    link->send<EventID>(&id);
+    // send event data
+    switch (id) {
+        case TEST:
+            link->send<Test>((Test*)event);
+            break;
+    }
+}
+
+void Event::toUdp(UdpLink* link, Event* event) {
+    // send event id
+    EventID id = event->event_id;
+    link->send<EventID>(&id);
+    // send event data
+    switch (id) {
+        case TEST:
+            link->send<Test>((Test*)event);
+            break;
+    }
+}
+
+Event* Event::fromTcp(TcpLink* link) {
+    Event* event = NULL;
+    // receive event id
+    EventID id = *(link->receive<EventID>());
+    // receive event
+    switch (id) {
+        case TEST:
+            event = link->receive<Test>();
+            break;
+    }
+    return event;
+}
+
+Event* Event::fromUdp(UdpLink* link) {
+    Event* event = NULL;
+    // receive event id
+    EventID id = *(link->receive<EventID>());
+    // receive event
+    switch (id) {
+        case TEST:
+            event = link->receive<Test>();
+            break;
+    }
+    return event;
+}
 
 void tcp_demo() {
     std::cout << "== TCP-based demo ==" << std::endl;
@@ -44,8 +98,7 @@ void tcp_demo() {
     NetworkingQueue* clientsided = new NetworkingQueue(client);
     
     // the client can send a specialized event
-    Test* a = new Test();
-    memcpy(a->text, "Hello world :)", 14);
+    Test* a = new Test("Hello World :)");
     clientsided->push(a);
 
     // and the server can read the event
@@ -60,8 +113,7 @@ void tcp_demo() {
     }
     
     // now the server could answer
-    Test* c = new Test();
-    memcpy(c->text, "How are you?", 12);
+    Test* c = new Test("How are you?");
     serversided->push(c);
     
     // and the client is able to read the event
@@ -116,8 +168,7 @@ void udp_demo() {
     // destination.
     
     // the client can send a specialized event - as before
-    Test* a = new Test();
-    memcpy(a->text, "Hello world :)", 14);
+    Test* a = new Test("Hello world :)");;
     clientsided->push(a);
 
     // and the server can read the event
@@ -132,8 +183,7 @@ void udp_demo() {
     }
     
     // now the server could answer
-    Test* c = new Test();
-    memcpy(c->text, "How are you?", 12);
+    Test* c = new Test("How are you?");
     serversided->push(c);
     
     // and the client is able to read the event

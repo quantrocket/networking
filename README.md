@@ -39,11 +39,5 @@ Scheduled Changes:
 
     client-client architecture
 
-    fix memory lecks when exceptions are thrown
-
-    alternative to malloc before receiving data (should be freed, not deleted)
-
-    use size_t for length of bytes (not different types)
-
     virtual void Event::serialize() und virtual bool Event::deserialize()
 

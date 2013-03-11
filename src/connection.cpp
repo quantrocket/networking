@@ -51,7 +51,8 @@ unsigned short Host::port() {
 // ----------------------------------------------------------------------------
 
 Link::Link(Host* host)
-    : host(host) {
+    : host(host)
+    , linktype(UNKNOWN) {
 }
 
 Link::~Link() {
@@ -63,12 +64,14 @@ TcpLink::TcpLink()
     : Link(NULL)
     , socket(NULL)
     , online(false) {
+    this->linktype = TCP;
 }
 
 TcpLink::TcpLink(TCPsocket socket)
     : Link(NULL)
     , socket(socket)
     , online(true) {
+    this->linktype = TCP;
     this->host = new Host(SDLNet_TCP_GetPeerAddress(socket));
 }
 
@@ -103,14 +106,15 @@ void TcpLink::close() {
     this->host = NULL;
 }
 
-void TcpLink::send(void* data, int len) {
+/*
+void TcpLink::send(void* data, std::size_t len) {
     if (this->socket == NULL) {
         std::cout << "TCP Socket is not connected" << std::endl;
         this->online = false;
         throw BrokenPipe();
     }
     // write byte amount
-    int expected = sizeof(int);
+    std::size_t expected = sizeof(std::size_t);
     int sent = SDLNet_TCP_Send(this->socket, &len, expected);
     if (sent < expected) {
         this->online = false;
@@ -131,8 +135,8 @@ void* TcpLink::receive() {
         throw BrokenPipe();
     }
     // read byte amount
-    int len;
-    int read = SDLNet_TCP_Recv(this->socket, &len, sizeof(int));
+    std::size_t len;
+    int read = SDLNet_TCP_Recv(this->socket, &len, sizeof(std::size_t));
     if (read <= 0) {
         this->online = false;
         throw BrokenPipe();
@@ -142,15 +146,18 @@ void* TcpLink::receive() {
         return NULL;
     }
     // allocate memory
+    this->last_len = len;
     void* buffer = malloc(len);
     // read actual data
     read = SDLNet_TCP_Recv(this->socket, buffer, len);
     if (read <= 0) {
         this->online = false;
+        free(buffer);
         throw BrokenPipe();
     }
     return buffer;
 }
+*/
 
 // ---------------------------------------------------------------------------- 
 
@@ -201,18 +208,14 @@ TcpLink* TcpListener::accept() {
 
 UdpLink::UdpLink()
     : Link(NULL)
-    , socket(NULL)
-    , max_size(1048576) /* 1 megabyte */ {
+    , socket(NULL) {
+    this->linktype = UDP;
 }
 
 UdpLink::~UdpLink() {
     if (this->socket != NULL) {
         this->close();
     }
-}
-
-void UdpLink::setMaxSize(unsigned long max_size) {
-    this->max_size = max_size;
 }
 
 void UdpLink::setTarget(const std::string& host, unsigned short port) {
@@ -246,7 +249,8 @@ void UdpLink::close() {
     }
 }
 
-void UdpLink::send(void* data, int len) {
+/*
+void UdpLink::send(void* data, std::size_t len) {
     if (this->socket == NULL) {
         std::cout << "UDP Socket is not connected" << std::endl;
         throw BrokenPipe();
@@ -279,6 +283,7 @@ void* UdpLink::receive() {
     while (!success) {
         if (this->socket == NULL) {
             std::cout << "UDP Socket is not connected" << std::endl;
+            SDLNet_FreePacket(packet);
             throw BrokenPipe();
         }
         // try to read package
@@ -286,6 +291,7 @@ void* UdpLink::receive() {
             case 1:
                 // package received
                 data = malloc(packet->len);
+                this->last_len = packet->len;
                 memcpy(data, packet->data, packet->len);
                 success = true;
                 break;
@@ -295,11 +301,12 @@ void* UdpLink::receive() {
             case -1:
                 // error occured
                 SDLNet_FreePacket(packet);
+                free(data);
                 throw NetworkError("SDLNet_UDP_Recv: " + std::string(SDLNet_GetError()));
         }
     }
     SDLNet_FreePacket(packet);
     return data;
 }
-        
+*/        
 
