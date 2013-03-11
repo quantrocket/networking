@@ -26,32 +26,35 @@ namespace event_id {
     const EventID MESSAGE = 3;
 }
 
-struct Login: Event {
-    Login()
-        : Event(event_id::LOGIN) {
-    }
+class Login: public Event {
+    public:
+        Login()
+            : Event(event_id::LOGIN) {
+        }
 };
 
-struct Logout: Event {
-    Logout()
-        : Event(event_id::LOGOUT) {
-    }
+class Logout: public Event {
+    public:
+        Logout()
+            : Event(event_id::LOGOUT) {
+        }
 };
 
-struct Message: Event {
-    char message[20000];
+class Message: public Event {
+    public:
+        char message[20000];
 
-    Message()
-        : Event(event_id::MESSAGE) {
-    }
-    Message(std::string message)
-        : Event(event_id::MESSAGE) {
-        memcpy(this->message, message.c_str(), 20000);
-    }
-    Message(const Message& other)
-        : Event(other.event_id) {
-        memcpy(this->message, other.message, 20000);
-    }
+        Message()
+            : Event(event_id::MESSAGE) {
+        }
+        Message(std::string message)
+            : Event(event_id::MESSAGE) {
+            memcpy(this->message, message.c_str(), 20000);
+        }
+        Message(const Message& other)
+            : Event(other.event_id) {
+            memcpy(this->message, other.message, 20000);
+        }
 };
 
 void Event::toTcp(TcpLink* link, Event* event) {

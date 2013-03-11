@@ -65,24 +65,25 @@ namespace eventid {
  *      }
  *  };
  */
-struct Event {
-    EventID event_id;
-    
-    // required to generate base events
-    Event(): event_id(eventid::GENERIC) {}
-    // required to set correct id
-    Event(EventID event_id): event_id(event_id) {}
-    // required to copy events
-    Event(const Event& other): event_id(other.event_id) {}
-    
-    // walkaround: cannot implement virtual template
-    // send- / receive-methods for link class
-    /*
-    template <typename TLink> static void toLink(TLink* link, Event* event);
-    template <typename TLink> static Event* fromLink(TLink* link);
-    */
-    static void toTcp(TcpLink* link, Event* event);
-    static Event* fromTcp(TcpLink* link);
+class Event {
+    public:
+        EventID event_id;
+        
+        // required to generate base events
+        Event(): event_id(eventid::GENERIC) {}
+        // required to set correct id
+        Event(EventID event_id): event_id(event_id) {}
+        // required to copy events
+        Event(const Event& other): event_id(other.event_id) {}
+        
+        // walkaround: cannot implement virtual template
+        // send- / receive-methods for link class
+        /*
+        template <typename TLink> static void toLink(TLink* link, Event* event);
+        template <typename TLink> static Event* fromLink(TLink* link);
+        */
+        static void toTcp(TcpLink* link, Event* event);
+        static Event* fromTcp(TcpLink* link);
 };
 
 /// Thread-Safe Queue

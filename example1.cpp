@@ -19,13 +19,14 @@ http://creativecommons.org/licenses/by-nc/3.0/
 const EventID TEST = 1;
 
 // a specialized event
-struct Test: Event {
-    char text[255];
-    Test(): Event(TEST) {
-    }
-    Test(std::string text): Event(TEST) {
-        memcpy(this->text, text.c_str(), 255);
-    }
+class Test: public Event {
+    public:
+        char text[255];
+        Test(): Event(TEST) {
+        }
+        Test(std::string text): Event(TEST) {
+            memcpy(this->text, text.c_str(), 255);
+        }
 };
 
 void Event::toTcp(TcpLink* link, Event* event) {
