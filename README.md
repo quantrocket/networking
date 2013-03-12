@@ -13,7 +13,8 @@ Christian Glöckner
 # Limitations
 ===
 
-1. Event customization
+Event customization
+---
 
 Events mustn't contain pointers or other high-level data which are based on pointers. This limitation is founded in the easy way the system is sending and receiving data over the network. There is no serialization of given events. Therefore each event has to use primitive value types only. Remember to serialize and unserialize all data on your own before inserting these data into your derived event.
 
@@ -53,12 +54,14 @@ from example1.cpp
     }
 
 
-2. Multithreading Server/Client
+Multithreading Server/Client
+---
 
 Currently, the classes BaseServer and BaseClient are single-threaded. Their logic can be called using the void logic() methods. Extending them for multithreading is sketched in example2.cpp and will be moved to a seperate multithreading server class.
 
 
-3. Protocols
+Protocols
+---
 
 UDP support is currently disabled. I'm not shure whether I already need UDP, so it will stay disabled for a non-specified while.
 
