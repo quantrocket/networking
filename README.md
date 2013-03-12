@@ -18,7 +18,7 @@ Event customization
 
 Events mustn't contain pointers or other high-level data which are based on pointers. This limitation is founded in the easy way the system is sending and receiving data over the network. There is no serialization of given events. Therefore each event has to use primitive value types only. Remember to serialize and unserialize all data on your own before inserting these data into your derived event.
 
-from example1.cpp
+From `example1.cpp`:
 
     class Test: public Event {
         public:
@@ -37,10 +37,10 @@ from example1.cpp
     };
 
 
-Each event needs to implement at least the default-constructor and a copy-constructor-like constructor who gets a pointer to void. Remember to set the event_id to the right value. The void-pointer-constructor is used to assemble your events from a void-pointer, as used by Event* Event::assemble(void* buffer).
-To customize receiving events to need yo implement the static Event-method Event* assemble(void* buffer). It is called by the NetworkingQueue each time the system tries to receive an event using a TCP-Link. Check the example programs for example implementations.
+Each event needs to implement at least the default-constructor and a copy-constructor-like constructor who gets a pointer to void. Remember to set the event_id to the right value. The void-pointer-constructor is used to assemble your events from a void-pointer, as used by `Event* Event::assemble(void* buffer)`.
+To customize receiving events you need to implement the static Event-method `Event* assemble(void* buffer)`. It is called by the NetworkingQueue each time the system tries to receive an event using a TCP-Link.
 
-from example1.cpp
+From `example1.cpp`:
 
     Event* Event::assemble(void* buffer) {
         Event* event = reinterpret_cast<Event*>(buffer);
@@ -57,7 +57,7 @@ from example1.cpp
 Multithreading Server/Client
 ---
 
-Currently, the classes BaseServer and BaseClient are single-threaded. Their logic can be called using the void logic() methods. Extending them for multithreading is sketched in example2.cpp and will be moved to a seperate multithreading server class.
+Currently, the classes `BaseServer` and `BaseClient` are single-threaded. Their logic can be called using the `void logic()` methods. Extending them for multithreading is sketched in `example2.cpp` and will be moved to a seperate multithreading server class.
 
 
 Protocols
