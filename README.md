@@ -89,5 +89,6 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
 - much more detailed testing (e.g. for memory leaks)
 - seperate multithreading server class
+- `NetworkingQueue`: enable waiting for receiver-thread. This is currently impossible because `SDLNet_TCP_Recv` works blocking. "A non-blocking way of using this function is to check the socket with `SDLNet_CheckSockets` and `SDLNet_SocketReady` and call `SDLNet_TCP_Recv` only if the socket is active." (see: http://sdl.beuc.net/sdl.wiki/SDLNet_TCP_Recv). "Even after the procedure started in the thread returns, there still exist some resources allocated to the thread. To free these resources, use `SDL_WaitThread` to wait for the thread to finish and obtain the status code of the thread." (see: http://sdl.beuc.net/sdl.wiki/SDL_CreateThread)
 
 
