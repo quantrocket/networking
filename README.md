@@ -1,4 +1,5 @@
 # Event-Based Networking Framework
+===
 
 This file is part of the networking module https://github.com/cgloeckner/networking. The project offers an event-based networking framework for games and other software. It's main purpose is to integrate into my own game project as well as integrate it into FLARE by Clint Bellanger one day.
 
@@ -10,13 +11,13 @@ Christian Glöckner
 
 
 # Limitations
+===
 
 1. Event customization
 
 Events mustn't contain pointers or other high-level data which are based on pointers. This limitation is founded in the easy way the system is sending and receiving data over the network. There is no serialization of given events. Therefore each event has to use primitive value types only. Remember to serialize and unserialize all data on your own before inserting these data into your derived event.
 
 from example1.cpp
----------------
 
     class Test: public Event {
         public:
@@ -39,7 +40,6 @@ Each event needs to implement at least the default-constructor and a copy-constr
 To customize receiving events to need yo implement the static Event-method Event* assemble(void* buffer). It is called by the NetworkingQueue each time the system tries to receive an event using a TCP-Link. Check the example programs for example implementations.
 
 from example1.cpp
----------------
 
     Event* Event::assemble(void* buffer) {
         Event* event = reinterpret_cast<Event*>(buffer);
@@ -68,6 +68,7 @@ There will be a guide about furthur implementation nodes and more-detailed examp
 
 
 # Building
+===
 
 To build the module and simple demo application using gcc you can use:
 
@@ -81,6 +82,7 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
 
 # Scheduled Changes
+===
 
 - much more detailed testing (e.g. for memory leaks)
 - seperate multithreading server class
