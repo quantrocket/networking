@@ -84,85 +84,143 @@ Event* Event::assemble(void* buffer) {
 
 // ----------------------------------------------------------------------------
 
+int server_thread(void* param);
+
 class Server: public BaseServer {
+    friend int server_thread(void* param);
     protected:
-        void onStart();
-        void onConnect(Worker* worker);
         void onEvent(Worker* worker, Event* event);
-        void onDisconnect(Worker* worker);
-        void onStop();
+        Worker* connect(TcpLink* link);
+        void disconnect(Worker* worker);
     public:
         Server(unsigned short port);
+        virtual ~Server();
+        
+        void logic();
+
+        bool running;
+        SDL_Thread* thread;
 };
 
+int client_thread(void* param);
+
 class Client: public BaseClient {
+    friend int client_thread(void* param);
     protected:
         void onEvent(Event* event);
-        void onConnect();
-        void onDisconnect();
     public:
         Client(std::string hostname, unsigned short port);
+        virtual ~Client();
+        
+        bool running;
+        SDL_Thread* thread;
 };
+
+// ----------------------------------------------------------------------------
+
+int client_thread(void* param) {
+    Client* client = (Client*)param;
+    while (client->running) {
+        client->logic();
+    }
+    return 0;
+}
+
+int server_thread(void* param) {
+    Server* server = (Server*)param;
+    while (server->running) {
+        server->logic();
+    }
+    return 0;
+}
 
 // ----------------------------------------------------------------------------
 
 Server::Server(unsigned short port)
     : BaseServer(port) {
-}
-
-void Server::onStart() {
+    running = true;
+    this->thread = SDL_CreateThread(server_thread, (void*)this);
     std::cout << "Server started" << std::endl;
 }
 
-void Server::onConnect(Worker* worker) {
-    std::cout << "Worker #" << worker->id << " connected" << std::endl;
+Server::~Server() {
+    running = false;
+    SDL_WaitThread(this->thread, NULL);
+    std::cout << "Server stopped" << std::endl;
+}
+
+Worker* Server::connect(TcpLink* link) {
+    Worker* worker = BaseServer::connect(link);
+    if (worker != NULL) {
+        std::cout << "Worker #" << worker->id << " connected" << std::endl;
+    } else {
+        std::cout << "No Worker got\n";
+    }
+    return worker;
+}
+
+void Server::logic() {
+    BaseServer::logic();
+    auto workers = this->workers;
+    for (auto node = workers.begin(); node != workers.end(); node++) {
+        BaseServer::logic(node->second);
+    }
 }
 
 void Server::onEvent(Worker* worker, Event* event) {
-    if (event->event_id == event_id::MESSAGE) {
-        Message* msg = (Message*)event;
-        std::cout << "Worker #" << worker->id << " got: " << msg->message << std::endl;
-    } else if (event->event_id == event_id::LOGIN) {
-        std::cout << "Worker #" << worker->id << " got login" << std::endl;
-    } else if (event->event_id == event_id::LOGOUT) {
-        std::cout << "Worker #" << worker->id << " got logout" << std::endl;
-        worker->server->disconnect(worker);
-    } else {
-        std::cout << "Worker #" << worker->id << " got unknown event-id: #" << event->event_id << std::endl;
+    if (worker == NULL) { std::cout << "NULL-Worker!\n"; delete event; return; }
+    Message* msg = NULL;
+    switch (event->event_id) {
+        case event_id::MESSAGE:
+            msg = (Message*)event;
+            std::cout << "Worker #" << worker->id << " got: " << msg->message << std::endl;
+            break;
+        case event_id::LOGIN:
+            std::cout << "Worker #" << worker->id << " got login" << std::endl;
+            break;
+        case event_id::LOGOUT:
+            std::cout << "Worker #" << worker->id << " got logout" << std::endl;
+            this->disconnect(worker);
+            break;
+        default:
+            std::cout << "Worker #" << worker->id << " got unknown event-id: #" << event->event_id << std::endl;
     }
     delete event;
 }
 
-void Server::onDisconnect(Worker* worker) {
+void Server::disconnect(Worker* worker) {
     std::cout << "Worker #" << worker->id << " disconnected" << std::endl;
-}
-
-void Server::onStop() {
-    std::cout << "Server stopped" << std::endl;
+    BaseServer::disconnect(worker);
 }
 
 Client::Client(std::string hostname, unsigned short port)
     : BaseClient(hostname, port) {
-}
-
-void Client::onConnect() {
+    this->running = true;
+    this->thread = SDL_CreateThread(client_thread, (void*)this);
     std::cout << "Client connected" << std::endl;
 }
 
-void Client::onEvent(Event* event) {
-    if (event->event_id == event_id::MESSAGE) {
-        Message* msg = (Message*)event;
-        std::cout << "Client got: " << msg->message << std::endl;
-    } else if (event->event_id == event_id::LOGOUT) {
-        std::cout << "Server forces client to logout" << std::endl;
-        this->stop();
-    } else {
-        std::cout << "unknown event-id: #" << event->event_id << std::endl;
-    }
+Client::~Client() {
+    this->running = false;
+    SDL_WaitThread(this->thread, NULL);
+    std::cout << "Client disconnected" << std::endl;
 }
 
-void Client::onDisconnect() {
-    std::cout << "Client disconnected" << std::endl;
+void Client::onEvent(Event* event) {
+    Message* msg = NULL;
+    switch (event->event_id) {
+        case event_id::MESSAGE:
+            msg = (Message*)event;
+            std::cout << "Client got: " << msg->message << std::endl;
+            break;
+        case event_id::LOGOUT:
+            std::cout << "Server forces client to logout" << std::endl;
+            //this->link.close();
+            break;
+        default:
+            std::cout << "unknown event-id: #" << event->event_id << std::endl;
+    }
+    delete event;
 }
 
 // ----------------------------------------------------------------------------
@@ -179,18 +237,11 @@ int main(int argc, char **argv) {
     switch (argc) {
         case 2:
             server = new Server((unsigned short)(atoi(argv[1])));
-            server->start();
             while (true) {
+                server->logic();
                 getline(std::cin, input);
-                if (input == "restart") {
-                    server->push(new Logout());
-                    server->stop();
-                    server->start();
-                    continue;
-                }
                 if (input == "quit") {
                     server->push(new Logout());
-                    server->stop();
                     break;
                 }
                 if (input[0] == 't' && input[1] == 'o') {
@@ -213,9 +264,8 @@ int main(int argc, char **argv) {
             break;
         case 3:
             client = new Client(argv[1], (unsigned short)(atoi(argv[2])));
-            client->start();
             client->push(new Login());
-            while (client->running()) {
+            while (true) {
                 getline(std::cin, input);
                 if (input == "quit") {
                     break;
@@ -224,7 +274,6 @@ int main(int argc, char **argv) {
                 client->push(new Message(input));
             }
             client->push(new Logout());
-            client->stop();
             delete client;
             break;
         default:
