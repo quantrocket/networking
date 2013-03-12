@@ -14,6 +14,7 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #define CONNECTION_HPP
 
 #include <iostream>
+#include <stdlib.h>
 
 #include <SDL/SDL_net.h>
 
@@ -121,38 +122,68 @@ class TcpLink: public Link {
         TcpLink* accept();
         bool isOnline();
 
-        template <typename Data> void send(void* data) {
-            this->send<Data>((Data*)data);
-        }
-        template <typename Data> void send(Data* data) {
+        void send_ptr(void* data, std::size_t len) {
             if (this->socket == NULL) {
                 // tcp socket is not connected
                 this->online = false;
                 throw BrokenPipe();
             }
-            int sent = SDLNet_TCP_Send(this->socket, data, sizeof(Data));
-            if (sent < sizeof(Data)) {
+            int sent = SDLNet_TCP_Send(this->socket, data, len);
+            if (sent < len) {
+                std::cout << sent << " / " << len << "\n";
                 // error while sending
                 this->online = false;
                 throw BrokenPipe();
             }
         }
-        template <typename Data> Data* receive() {
+        template <typename Data> void send_data(Data data) {
             if (this->socket == NULL) {
                 // tcp socket is not connected
                 this->online = false;
                 throw BrokenPipe();
             }
-            Data* buffer = new Data();
-            int read = SDLNet_TCP_Recv(this->socket, buffer, sizeof(Data));
+            std::size_t len = sizeof(Data);
+            int sent = SDLNet_TCP_Send(this->socket, &data, len);
+            if (sent < len) {
+                std::cout << sent << " / " << len << "\n";
+                // error while sending
+                this->online = false;
+                throw BrokenPipe();
+            }
+        }
+        void* receive_ptr(std::size_t len) {
+            if (this->socket == NULL) {
+                // tcp socket is not connected
+                this->online = false;
+                throw BrokenPipe();
+            }
+            void* buffer = malloc(len);
+            int read = SDLNet_TCP_Recv(this->socket, buffer, len);
             if (read <= 0) {
                 // error while receiving
-                delete buffer;
+                free(buffer);
                 this->online = false;
                 throw BrokenPipe();
             }
             return buffer;
-        }     
+        }
+        template <typename Data> Data receive_data() {
+            if (this->socket == NULL) {
+                // tcp socket is not connected
+                this->online = false;
+                throw BrokenPipe();
+            }
+            Data data;
+            std::size_t len = sizeof(Data);
+            int read = SDLNet_TCP_Recv(this->socket, &data, len);
+            if (read <= 0) {
+                // error while receiving
+                this->online = false;
+                throw BrokenPipe();
+            }
+            return data;
+        }
+
 };
 
 /// A listener class for TCP links

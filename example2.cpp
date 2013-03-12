@@ -12,6 +12,7 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include <iostream>
 #include <vector>
+#include <string.h>
 
 #include "src/connection.hpp"
 #include "src/eventsystem.hpp"
@@ -31,11 +32,17 @@ class Login: public Event {
         Login()
             : Event(event_id::LOGIN) {
         }
+        Login(Login* other)
+            : Event(event_id::LOGIN) {
+        }
 };
 
 class Logout: public Event {
     public:
         Logout()
+            : Event(event_id::LOGOUT) {
+        }
+        Logout(Logout* other)
             : Event(event_id::LOGOUT) {
         }
 };
@@ -49,50 +56,31 @@ class Message: public Event {
         }
         Message(std::string message)
             : Event(event_id::MESSAGE) {
-            memcpy(this->message, message.c_str(), 20000);
+            strncpy(this->message, message.c_str(), 20000);
         }
-        Message(const Message& other)
-            : Event(other.event_id) {
-            memcpy(this->message, other.message, 20000);
+        Message(Message* other)
+            : Event(event_id::MESSAGE) {
+            strncpy(this->message, other->message, 20000);
         }
 };
 
-void Event::toTcp(TcpLink* link, Event* event) {
-    // send event id
+Event* Event::assemble(void* buffer) {
+    Event* event = reinterpret_cast<Event*>(buffer);
     EventID id = event->event_id;
-    link->send<EventID>(&id);
-    // send event data
     switch (id) {
         case event_id::LOGIN:
-            link->send<Login>(event);
+            event = new Login((Login*)buffer);
             break;
         case event_id::LOGOUT:
-            link->send<Logout>(event);
+            event = new Logout((Logout*)buffer);
             break;
         case event_id::MESSAGE:
-            link->send<Message>(event);
+            event = new Message((Message*)buffer);
             break;
-    }
-}
-
-Event* Event::fromTcp(TcpLink* link) {
-    Event* event = NULL;
-    // receive event id
-    EventID* id = link->receive<EventID>();
-    // receive event
-    switch (*id) {
-        case event_id::LOGIN:
-            event = link->receive<Login>();
-            break;
-        case event_id::LOGOUT:
-            event = link->receive<Logout>();
-            break;
-        case event_id::MESSAGE:
-            event = link->receive<Message>();
-            break;
-    }
+    };
     return event;
 }
+
 
 // ----------------------------------------------------------------------------
 
@@ -142,6 +130,7 @@ void Server::onEvent(Worker* worker, Event* event) {
     } else {
         std::cout << "Worker #" << worker->id << " got unknown event-id: #" << event->event_id << std::endl;
     }
+    delete event;
 }
 
 void Server::onDisconnect(Worker* worker) {

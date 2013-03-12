@@ -27,11 +27,15 @@ Host::Host(unsigned short port)
 }
 
 Host::Host(IPaddress* addr)
-    : addr(addr) {
+    : addr(new IPaddress()) {
+    this->addr->host = addr->host;
+    this->addr->port = addr->port;
 }
 
 Host::~Host() {
-    delete this->addr;
+    if (this->addr != NULL) {
+        delete this->addr;
+    }
 }
 
 std::string Host::ip() {

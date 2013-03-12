@@ -15,11 +15,15 @@ http://creativecommons.org/licenses/by-nc/3.0/
 int trigger_sender(void* param) {
     NetworkingQueue* system = reinterpret_cast<NetworkingQueue*>(param);
     while (system->running) {
-        Event* buffer = system->outgoing.pop();
-        if (buffer != NULL) {
+        Event* event = system->outgoing.pop();
+        if (event != NULL) {
+            std::size_t len = system->outlen.front();
+            system->outlen.pop();
             try {
-                Event::toTcp(system->link, buffer);
-                delete buffer;
+                system->link->send_data<std::size_t>(len);
+                system->link->send_ptr(event, len);
+                //Event::toTcp(system->link, buffer);
+                delete event;
             } catch (const BrokenPipe& e) {
                 system->running = false;
             }
@@ -31,14 +35,23 @@ int trigger_sender(void* param) {
 int trigger_receiver(void* param) {
     NetworkingQueue* system = reinterpret_cast<NetworkingQueue*>(param);
     while (system->running) {
-        Event* buffer = NULL;
+        void* buffer = NULL;
         try {
-            buffer = Event::fromTcp(system->link);
+            std::size_t len = system->link->receive_data<std::size_t>();
+            if (len > 0) {
+                // read data
+                buffer = system->link->receive_ptr(len);
+                if (buffer != NULL) {
+                    Event* event = Event::assemble(buffer);
+                    if (event != NULL) {
+                        system->incomming.push(event);
+                    }
+                    free(buffer);
+                }
+            }
+            //buffer = Event::fromTcp(system->link);
         } catch (const BrokenPipe& e) {
             system->running = false;
-        }
-        if (buffer != NULL) {
-            system->incomming.push(buffer);
         }
     }
     return 0;
@@ -46,6 +59,7 @@ int trigger_receiver(void* param) {
 
 NetworkingQueue::NetworkingQueue(TcpLink* link)
     : link(link) {
+    this->outlock = SDL_CreateMutex();
     // start threads
     this->running = true;
     this->sender_thread   = SDL_CreateThread(trigger_sender,   (void*)this);
@@ -53,11 +67,13 @@ NetworkingQueue::NetworkingQueue(TcpLink* link)
 }
 
 NetworkingQueue::~NetworkingQueue() {
+    SDL_DestroyMutex(this->outlock);
     // cancel threads
     this->running = false;
     this->link->close();
     SDL_WaitThread(this->sender_thread, NULL);
-    SDL_WaitThread(this->receiver_thread, NULL);
+    SDL_KillThread(this->receiver_thread); // SDLNet_TCP_Recv is blocking
+    //SDL_WaitThread(this->receiver_thread, NULL);
     // note: link might be used outside -- should be deleted here
 }
 

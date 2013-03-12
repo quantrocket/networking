@@ -137,8 +137,11 @@ void BaseServer::disconnect(Worker* worker) {
     }
     // wait for worker-thread
     worker->running = false;
-    SDL_WaitThread(worker->thread, NULL),
+    delete worker->queue;
+    SDL_WaitThread(worker->thread, NULL);
     worker->thread = NULL;
+    delete worker->link;
+    delete worker;
 }
 
 void BaseServer::stop() {
@@ -164,8 +167,8 @@ template <typename TEvent>
 void BaseServer::push(TEvent* event) {
     SDL_LockMutex(this->lock);
     for (auto node = this->workers.begin(); node != this->workers.end(); node++) {
-        // push copy event to worker (deleted after sending)
-        node->second->queue->push(new TEvent(*event));
+        // push event copy to worker (deleted after sending)
+        node->second->queue->push(new TEvent(event));
     }
     SDL_UnlockMutex(this->lock);
     delete event;

@@ -17,12 +17,15 @@ Events mustn't contain pointers or other high-level data which are based on poin
 
 UDP support is currently disabled because of some rough changes of the internals. I'm not shure whether I already need UDP, so it will stay disabled for a non-specified while.
 
-To customize sending / receiving events you need to implement the static Event-methods
+To customize receiving events to need yo implement the following Event-method:
 
-    void toTcp(TcpLink* link, Event* event);
-    Event* fromTcp(TcpLink* link);
+    static Event* assemble(void* buffer);
 
-They are called by the NetworkingQueue each time the system tries to send or receive an event using a TCP-Link.
+It is called by the NetworkingQueue each time the system tries to receive an event using a TCP-Link. Check the example programs for example implementations.
+
+Each event needs to implement at least the default-constructor and a copy-constructor-like constructor who gets a pointer to void. Remember to set the event_id to the right value. The void-pointer-constructor is used to assemble your events from a void-pointer, as used by Event* Event::assemble(void* buffer).
+
+There will be a guide about furthur implementation nodes and more-detailed examples.
 
 
 Building:
@@ -42,12 +45,6 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 Scheduled Changes:
 ----------------
 
-- host-to-host architecture
 - much more detailed testing (e.g. for memory leaks)
-- event serialization
-
-    virtual void Event::serialize()
-    virtual bool Event::deserialize()
-
 
 

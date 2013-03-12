@@ -11,6 +11,7 @@ http://creativecommons.org/licenses/by-nc/3.0/
 */
 
 #include <iostream>
+#include <string.h>
 
 #include "src/connection.hpp"
 #include "src/eventsystem.hpp"
@@ -22,38 +23,30 @@ const EventID TEST = 1;
 class Test: public Event {
     public:
         char text[255];
-        Test(): Event(TEST) {
+        Test()
+            : Event(TEST) {
         }
-        Test(std::string text): Event(TEST) {
-            memcpy(this->text, text.c_str(), 255);
+        Test(Test* other)
+            : Event(TEST) {
+            strncpy(this->text, other->text, 255);
+        }
+        Test(std::string text)
+            : Event(TEST) {
+            strncpy(this->text, text.c_str(), 255);
         }
 };
 
-void Event::toTcp(TcpLink* link, Event* event) {
-    // send event id
+Event* Event::assemble(void* buffer) {
+    Event* event = reinterpret_cast<Event*>(buffer);
     EventID id = event->event_id;
-    link->send<EventID>(&id);
-    // send event data
     switch (id) {
         case TEST:
-            link->send<Test>(event);
+            event = new Test((Test*)buffer);
             break;
-    }
-}
-
-Event* Event::fromTcp(TcpLink* link) {
-    Event* event = NULL;
-    // receive event id
-    EventID* id = link->receive<EventID>();
-    // receive event
-    switch (*id) {
-        case TEST:
-            event = link->receive<Test>();
-            break;
-    }
-    delete id;
+    };
     return event;
 }
+
 
 void tcp_demo() {
     std::cout << "== TCP-based demo ==" << std::endl;

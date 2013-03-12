@@ -54,14 +54,14 @@ namespace eventid {
  *          : Event(eventid::MY_EVENT)
  *          , senderID(sndid) {
  *          // copy string into char array
- *          memcpy(this->message, msg.c_str(), 255);
+ *          strncpy(this->message, msg.c_str(), 255);
  *      }
  *
  *      MyEvent(const MyEvent& other)
  *          : Event(other.event_id)
  *          , senderID(other.senderID) {
  *          // copy char array
- *          memcpy(this->message, other.message, 255);
+ *          strncpy(this->message, other.message, 255);
  *      }
  *  };
  */
@@ -74,16 +74,10 @@ class Event {
         // required to set correct id
         Event(EventID event_id): event_id(event_id) {}
         // required to copy events
-        Event(const Event& other): event_id(other.event_id) {}
+        Event(Event* other): event_id(other->event_id) {}
         
-        // walkaround: cannot implement virtual template
-        // send- / receive-methods for link class
-        /*
-        template <typename TLink> static void toLink(TLink* link, Event* event);
-        template <typename TLink> static Event* fromLink(TLink* link);
-        */
-        static void toTcp(TcpLink* link, Event* event);
-        static Event* fromTcp(TcpLink* link);
+        // assemble specific event from void* - buffer
+        static Event* assemble(void* buffer);
 };
 
 /// Thread-Safe Queue
@@ -177,6 +171,8 @@ class NetworkingQueue {
     friend int trigger_receiver(void* param);
     protected:
         EventQueue incomming, outgoing;
+        std::queue<std::size_t> outlen; // byte length of outgoing events
+        SDL_mutex* outlock; // lock for pushing outgoing events
         // networking link
         TcpLink* link;
         // threading stuff
@@ -195,7 +191,10 @@ class NetworkingQueue {
 // EventType must be derived from Event
 template <typename TEvent>
 void NetworkingQueue::push(TEvent* event) {
+    SDL_LockMutex(this->outlock);
     this->outgoing.push(event);
+    this->outlen.push(sizeof(TEvent));
+    SDL_UnlockMutex(this->outlock);
 }
 
 #endif
