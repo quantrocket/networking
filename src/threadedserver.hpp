@@ -51,7 +51,7 @@ class ThreadedServer: public BaseServer {
         SDL_mutex* workers_lock;
 
         // @node: The given sender is deleted automatically after processing.
-        virtual void dispatch(Sender* sender) = 0;
+        virtual void dispatch((Worker* worker, Event* event) = 0;
 
         virtual Worker* connect(TcpLink* link);
         virtual void disconnect(Worker* worker);

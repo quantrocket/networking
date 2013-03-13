@@ -37,7 +37,7 @@ int server_accepter(void* param) {
 
 int server_dispatcher(void* param) {
     Sender* sender = (Sender*)param;
-    sender->server->dispatch(sender);
+    sender->server->dispatch(sender->worker, sender->event);
     delete sender;
     std::cout << "dispatch finished\n";
 }

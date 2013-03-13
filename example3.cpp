@@ -85,7 +85,7 @@ Event* Event::assemble(void* buffer) {
 
 class Server: public ThreadedServer {
     protected:
-        void dispatch(Sender* sender);
+        void dispatch((Worker* worker, Event* event);
         Worker* connect(TcpLink* link);
         void disconnect(Worker* worker);
     public:
@@ -128,9 +128,7 @@ Worker* Server::connect(TcpLink* link) {
     return worker;
 }
 
-void Server::dispatch(Sender* sender) {
-    Worker* worker = sender->worker;
-    Event* event = sender->event;
+void Server::dispatch(Worker* worker, Event* event) {
     if (worker == NULL) { std::cout << "NULL-Worker!\n"; delete event; return; }
     Message* msg = NULL;
     switch (event->event_id) {
