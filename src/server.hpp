@@ -102,11 +102,8 @@ void BaseServer::push(TEvent* event, WorkerID id) {
         if (node != this->workers.end() && node->second != NULL) {
             // send to worker (deleted after sending)
             node->second->queue->push(event);
-        } else {
-            // @note: just for debugging purpose
-            std::cout << "Unknown worker id #" << id
-                      << ". Pushing event canceled" << std::endl;
         }
+        // invalid workers are ignored        
     }
 }
 
