@@ -64,20 +64,28 @@ The primitive UDP support was removed. I'm not shure whether I already need UDP,
 There will be a guide about furthur implementation nodes and more-detailed examples.
 
 
+# Examples
+===
+
+`example1.cpp`
+---
+This example is very basic. It shows how the `NetworkingQueue` works.
+
+`example2.cpp`
+---
+This example is using the single-threaded `Server` and `Client`. It provides a basic multiuser chat-system.
+
+`example3.cpp`
+---
+This example is very similar to `example2.cpp`, but using the multithreading `ThreadedServer` instead of `Server`. Each worker's event can be dispatched at a single thread by `void Server::dispatch(Worker* worker, Event* event)`. In this example each dispatched events are automatically deleted by the `ThreadedServer` class after the dispatch method finished.
+
+
 # Building
 ===
 
-To build the module and simple demo application using gcc you can use:
+There are some example programs called `example1.cpp`, `example2.cpp` and so on. You can build the module and a demo application using gcc by
 
-    g++ -o demo src/*.cpp example1.cpp -lSDL -lSDL_net --std=c++0x
-
-To build the module and more complex demo application (single threaded server) using gcc you can use:
-
-    g++ -o demo src/*.cpp example2.cpp -lSDL -lSDL_net --std=c++0x
-
-To build the module and an even more complex demo application (same as example2 but using multi-threading) using gcc you can use
-
-    g++ -o demo src/*.cpp example3.cpp -lSDL -lSDL_net --std=c++0x
+    g++ -o demo src/*.cpp EXAMPLE_CPP -lSDL -lSDL_net --std=c++0x
 
 I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
@@ -87,5 +95,5 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
 - much more detailed testing (e.g. for memory leaks)
 - `NetworkingQueue`: enable waiting for receiver-thread. This is currently impossible because `SDLNet_TCP_Recv` works blocking. "A non-blocking way of using this function is to check the socket with `SDLNet_CheckSockets` and `SDLNet_SocketReady` and call `SDLNet_TCP_Recv` only if the socket is active." (see: http://sdl.beuc.net/sdl.wiki/SDLNet_TCP_Recv). "Even after the procedure started in the thread returns, there still exist some resources allocated to the thread. To free these resources, use `SDL_WaitThread` to wait for the thread to finish and obtain the status code of the thread." (see: http://sdl.beuc.net/sdl.wiki/SDL_CreateThread)
-
+- even larger and even more complex example (small game or gui-application)
 
