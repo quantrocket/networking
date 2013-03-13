@@ -89,7 +89,7 @@ int server_thread(void* param);
 class Server: public BaseServer {
     friend int server_thread(void* param);
     protected:
-        void onEvent(Worker* worker, Event* event);
+        void nofity(Worker* worker, Event* event);
         Worker* connect(TcpLink* link);
         void disconnect(Worker* worker);
     public:
@@ -107,7 +107,7 @@ int client_thread(void* param);
 class Client: public BaseClient {
     friend int client_thread(void* param);
     protected:
-        void onEvent(Event* event);
+        void nofity(Event* event);
     public:
         Client(std::string hostname, unsigned short port);
         virtual ~Client();
@@ -167,7 +167,7 @@ void Server::logic() {
     }
 }
 
-void Server::onEvent(Worker* worker, Event* event) {
+void Server::nofity(Worker* worker, Event* event) {
     if (worker == NULL) { std::cout << "NULL-Worker!\n"; delete event; return; }
     Message* msg = NULL;
     switch (event->event_id) {
@@ -206,7 +206,7 @@ Client::~Client() {
     std::cout << "Client disconnected" << std::endl;
 }
 
-void Client::onEvent(Event* event) {
+void Client::nofity(Event* event) {
     Message* msg = NULL;
     switch (event->event_id) {
         case event_id::MESSAGE:
