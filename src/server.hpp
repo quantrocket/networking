@@ -67,7 +67,9 @@ class BaseServer {
         std::map<WorkerID, Worker*> workers;
         WorkerID next_id;
 
+        // @note: The given event should be deleted after processing.
         virtual void nofity(Worker* worker, Event* event) = 0;
+        
         virtual Worker* connect(TcpLink* link);
         virtual void disconnect(Worker* worker);
 

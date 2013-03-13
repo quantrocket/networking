@@ -54,16 +54,10 @@ From `example1.cpp`:
     }
 
 
-Multithreading Server/Client
----
-
-Currently, the classes `BaseServer` and `BaseClient` are single-threaded. Their logic can be called using the `void logic()` methods. Extending them for multithreading is sketched in `example2.cpp` and will be moved to a seperate multithreading server class.
-
-
 Protocols
 ---
 
-UDP support is currently disabled. I'm not shure whether I already need UDP, so it will stay disabled for a non-specified while.
+The primitive UDP support was removed. I'm not shure whether I already need UDP, so it will stay disabled for a non-specified while.
 
 
 
@@ -77,9 +71,13 @@ To build the module and simple demo application using gcc you can use:
 
     g++ -o demo src/*.cpp example1.cpp -lSDL -lSDL_net --std=c++0x
 
-To build the module and more complex demo application using gcc you can use:
+To build the module and more complex demo application (single threaded server) using gcc you can use:
 
     g++ -o demo src/*.cpp example2.cpp -lSDL -lSDL_net --std=c++0x
+
+To build the module and an even more complex demo application (same as example2 but using multi-threading) using gcc you can use
+
+    g++ -o demo src/*.cpp example3.cpp -lSDL -lSDL_net --std=c++0x
 
 I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
@@ -88,7 +86,6 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 ===
 
 - much more detailed testing (e.g. for memory leaks)
-- seperate multithreading server class
 - `NetworkingQueue`: enable waiting for receiver-thread. This is currently impossible because `SDLNet_TCP_Recv` works blocking. "A non-blocking way of using this function is to check the socket with `SDLNet_CheckSockets` and `SDLNet_SocketReady` and call `SDLNet_TCP_Recv` only if the socket is active." (see: http://sdl.beuc.net/sdl.wiki/SDLNet_TCP_Recv). "Even after the procedure started in the thread returns, there still exist some resources allocated to the thread. To free these resources, use `SDL_WaitThread` to wait for the thread to finish and obtain the status code of the thread." (see: http://sdl.beuc.net/sdl.wiki/SDL_CreateThread)
 
 
