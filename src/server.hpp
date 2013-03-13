@@ -29,6 +29,9 @@ class Worker {
         WorkerID id;
         TcpLink* link;
         NetworkingQueue* queue;
+
+        Worker(WorkerID id, TcpLink* link);
+        virtual ~Worker();
 };
 
 /// Base Server
@@ -64,7 +67,7 @@ class BaseServer {
         std::map<WorkerID, Worker*> workers;
         WorkerID next_id;
 
-        virtual void onEvent(Worker* worker, Event* event) = 0;
+        virtual void nofity(Worker* worker, Event* event) = 0;
         virtual Worker* connect(TcpLink* link);
         virtual void disconnect(Worker* worker);
 
@@ -78,67 +81,6 @@ class BaseServer {
         template <typename TEvent> void push(TEvent* event);        
         template <typename TEvent> void push(TEvent* event, WorkerID id);
 };
-
-// ----------------------------------------------------------------------------
-
-BaseServer::BaseServer(unsigned short port)
-    : next_id(0) {
-    this->listener.open(port);
-}
-
-BaseServer::~BaseServer() {
-    // disconnect workers
-    for (auto node = this->workers.begin(); node != this->workers.end(); node++) {
-        if (node->second != NULL) {
-            this->disconnect(node->second);
-        }
-    }
-    this->listener.close();
-}
-
-Worker* BaseServer::connect(TcpLink* link) {
-    if (link != NULL) {
-        // create worker
-        Worker* worker = new Worker();
-        worker->id     = this->next_id++;
-        worker->link   = link;
-        worker->queue  = new NetworkingQueue(worker->link);
-        this->workers[worker->id] = worker;
-        return worker;
-    } else {
-        return NULL;
-    }
-}
-
-void BaseServer::disconnect(Worker* worker) {
-    if (worker != NULL) {
-        // wait until outgoing queue is empty
-        while (!worker->queue->isEmpty()) {
-            SDL_Delay(DELAY_ON_EMPTY);
-        }
-        // delete and remove worker
-        delete worker->queue;
-        delete worker->link;
-        this->workers.erase(this->workers.find(worker->id));
-        delete worker;
-    }
-}
-
-void BaseServer::logic() {
-    TcpLink* incomming = this->listener.accept();
-    if (incomming != NULL) {
-        this->connect(incomming);
-    }
-}
-
-void BaseServer::logic(Worker* worker) {
-    if (worker != NULL && worker->link->isOnline()) {
-        Event* next = worker->queue->pop();
-        if (next != NULL) {
-            this->onEvent(worker, next);
-        }
-    }
-}
 
 template <typename TEvent>
 void BaseServer::push(TEvent* event) {
@@ -168,6 +110,4 @@ void BaseServer::push(TEvent* event, WorkerID id) {
     }
 }
 
-
 #endif
-
