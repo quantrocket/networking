@@ -79,6 +79,10 @@ This example is using the single-threaded `Server` and `Client`. It provides a b
 ---
 This example is very similar to `example2.cpp`, but using the multithreading `ThreadedServer` instead of `Server`. Each worker's event can be dispatched at a single thread by `void Server::dispatch(Worker* worker, Event* event)`. In this example each dispatched events are automatically deleted by the `ThreadedServer` class after the dispatch method finished.
 
+`example4.cpp`
+---
+This example is a basic game demo using "connect four" (in German: "Vier gewinnt"). It shows a very trivial implementation of network communication based on `NetworkingQueue` without any Server- or Client-classes. Currently the game does not support winning conditions. So it will run until all fields are blocked and forces the player to do a turn ... not so great but suitable as demonstration :) 
+
 
 # Building
 ===
@@ -95,5 +99,5 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
 - much more detailed testing (e.g. for memory leaks)
 - `NetworkingQueue`: enable waiting for receiver-thread. This is currently impossible because `SDLNet_TCP_Recv` works blocking. "A non-blocking way of using this function is to check the socket with `SDLNet_CheckSockets` and `SDLNet_SocketReady` and call `SDLNet_TCP_Recv` only if the socket is active." (see: http://sdl.beuc.net/sdl.wiki/SDLNet_TCP_Recv). "Even after the procedure started in the thread returns, there still exist some resources allocated to the thread. To free these resources, use `SDL_WaitThread` to wait for the thread to finish and obtain the status code of the thread." (see: http://sdl.beuc.net/sdl.wiki/SDL_CreateThread)
-- even larger and even more complex example (small game or gui-application)
+
 
