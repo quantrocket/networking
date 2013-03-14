@@ -22,11 +22,12 @@ int trigger_sender(void* param) {
             try {
                 system->link->send_data<std::size_t>(len);
                 system->link->send_ptr(event, len);
-                //Event::toTcp(system->link, buffer);
                 delete event;
             } catch (const BrokenPipe& e) {
                 system->running = false;
             }
+        } else {
+            SDL_Delay(DELAY_ON_EMPTY);
         }
     }
     return 0;
@@ -47,9 +48,12 @@ int trigger_receiver(void* param) {
                         system->incomming.push(event);
                     }
                     free(buffer);
+                } else {
+                    SDL_Delay(DELAY_ON_EMPTY);
                 }
+            } else {
+                SDL_Delay(DELAY_ON_EMPTY);
             }
-            //buffer = Event::fromTcp(system->link);
         } catch (const BrokenPipe& e) {
             system->running = false;
         }

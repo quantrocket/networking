@@ -85,7 +85,7 @@ Event* Event::assemble(void* buffer) {
 
 class Server: public ThreadedServer {
     protected:
-        void dispatch((Worker* worker, Event* event);
+        void dispatch(Worker* worker, Event* event);
         Worker* connect(TcpLink* link);
         void disconnect(Worker* worker);
     public:
@@ -110,7 +110,7 @@ class Client: public BaseClient {
 // ----------------------------------------------------------------------------
 
 Server::Server(unsigned short port)
-    : ThreadedServer(port) {
+    : ThreadedServer(port, false) {
     std::cout << "Server started" << std::endl;
 }
 

@@ -40,6 +40,7 @@ class ThreadedServer: public BaseServer {
     friend int server_handler(void* param);
     friend int server_dispatcher(void* param);
     private:
+        bool thread_per_dispatch;
         SDL_Thread* accepter;
         SDL_Thread* handler;
         std::vector<SDL_Thread*> dispatchers;
@@ -56,7 +57,7 @@ class ThreadedServer: public BaseServer {
         virtual Worker* connect(TcpLink* link);
         virtual void disconnect(Worker* worker);
     public:
-        ThreadedServer(unsigned short port);
+        ThreadedServer(unsigned short port, bool thread_per_dispatch);
         virtual ~ThreadedServer();
 };
 

@@ -22,7 +22,7 @@ class BaseClient {
         TcpLink link;
         NetworkingQueue* queue;
 
-        virtual void onEvent(Event* event) = 0;
+        virtual void nofity(Event* event) = 0;
     public:
         BaseClient(std::string hostname, unsigned short port);
         virtual ~BaseClient();

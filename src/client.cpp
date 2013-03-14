@@ -36,7 +36,7 @@ void BaseClient::logic() {
         // handle next event
         Event* next = this->queue->pop();
         if (next != NULL) {
-            this->onEvent(next);
+            this->nofity(next);
         }
     }
 }

@@ -23,6 +23,7 @@ int server_handler(void* param) {
         for (auto node = workers.begin(); node != workers.end(); node++) {
             server->logic(node->second);
         }
+        SDL_Delay(DELAY_ON_EMPTY);
     }
     return 0;
 }
@@ -31,6 +32,7 @@ int server_accepter(void* param) {
     ThreadedServer* server = (ThreadedServer*)param;
     while (server->running) {
         server->logic();
+        SDL_Delay(DELAY_ON_EMPTY);
     }
     return 0;
 }
@@ -39,7 +41,6 @@ int server_dispatcher(void* param) {
     Sender* sender = (Sender*)param;
     sender->server->dispatch(sender->worker, sender->event);
     delete sender;
-    std::cout << "dispatch finished\n";
 }
 
 // ---------------------------------------------------------------------------- 
@@ -57,8 +58,9 @@ Sender::~Sender() {
 
 // ---------------------------------------------------------------------------- 
 
-ThreadedServer::ThreadedServer(unsigned short port)
-    : BaseServer(port) {
+ThreadedServer::ThreadedServer(unsigned short port, bool thread_per_dispatch)
+    : BaseServer(port)
+    , thread_per_dispatch(thread_per_dispatch) {
     this->workers_lock    = SDL_CreateMutex();
     this->dispatchers_lock = SDL_CreateMutex();
     running = true;
@@ -71,9 +73,11 @@ ThreadedServer::~ThreadedServer() {
     // wait for accepter and handler threads
     SDL_WaitThread(this->accepter, NULL);
     SDL_WaitThread(this->handler,  NULL);
-    // wait for all dispatcher threads (as a rule the majority was been finished, yet)
-    for (auto node = this->dispatchers.begin(); node != this->dispatchers.end(); node++) {
-        SDL_WaitThread(*node, NULL);
+    if (this->thread_per_dispatch) {
+        // wait for all dispatcher threads (as a rule the majority was been finished, yet)
+        for (auto node = this->dispatchers.begin(); node != this->dispatchers.end(); node++) {
+            SDL_WaitThread(*node, NULL);
+        }
     }
     // free mutices
     SDL_DestroyMutex(this->workers_lock);
@@ -81,13 +85,18 @@ ThreadedServer::~ThreadedServer() {
 }
 
 void ThreadedServer::nofity(Worker* worker, Event* event) {
-    // sender is deleted at the end of server_dispatcher()
-    Sender* sender = new Sender(worker, event, this);
-    SDL_Thread* thread = SDL_CreateThread(server_dispatcher, (void*)sender);
-    // when destroying the server, it will wait for all dispatchers
-    SDL_LockMutex(this->dispatchers_lock);
-    this->dispatchers.push_back(thread);
-    SDL_UnlockMutex(this->dispatchers_lock);
+    if (this->thread_per_dispatch) {
+        // sender is deleted at the end of server_dispatcher()
+        Sender* sender = new Sender(worker, event, this);
+        SDL_Thread* thread = SDL_CreateThread(server_dispatcher, (void*)sender);
+        // when destroying the server, it will wait for all dispatchers
+        SDL_LockMutex(this->dispatchers_lock);
+        this->dispatchers.push_back(thread);
+        SDL_UnlockMutex(this->dispatchers_lock);
+    } else {
+        this->dispatch(worker, event);
+        delete event;
+    }
 }
 
 Worker* ThreadedServer::connect(TcpLink* link) {
