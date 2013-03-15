@@ -10,51 +10,35 @@ Kind regards
 Christian Glöckner
 
 
-# Limitations
+# Event customization
 ===
-
-Event customization
----
 
 Events mustn't contain pointers or other high-level data which are based on pointers. This limitation is founded in the easy way the system is sending and receiving data over the network. There is no serialization of given events. Therefore each event has to use primitive value types only. Remember to serialize and unserialize all data on your own before inserting these data into your derived event.
 
 Each event needs to implement at least the default-constructor and a copy-constructor-like constructor who gets a pointer to void. Remember to set the event_id to the right value. The void-pointer-constructor is used to assemble your events from a void-pointer, as used by `Event* Event::assemble(void* buffer)`.
 To customize receiving events you need to implement the static Event-method `Event* assemble(void* buffer)`. It is called by the NetworkingQueue each time the system tries to receive an event using a TCP-Link.
 
-Protocols
----
-
-The primitive UDP support was removed. I'm not shure whether I already need UDP, so it will stay disabled for a non-specified while.
-
-
-There will be a guide about furthur implementation nodes and more-detailed examples.
-
-
-# Examples
+# TCP-only
 ===
 
-`examples/chatroom/main.cpp` etc.
----
-This example is a basic server-client chatroom.
+Currently there is no UDP support. The server-client code is completly based on TCP only. I'm not shure whether I already need UDP, so it will stay disabled for a non-specified while.
 
+
+# Example
+===
+
+You can find a server-client-based chatroom example in the directory `example/`. It shoulds the basic usage of a possible multiuser chatroom.
 
 
 # Building
 ===
 
-Building the module is easy; just remember to link SDL and SDL_net. Currently you need a compiler supporting C++11 (e.g. `--std=c++0x` for gcc).
-
-You can build the examples just by:
-
-    g++ -o chatroom src/*.cpp examples/chatroom/*.cpp -lSDL -lSDL_net --std=c++0x
-
-I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
+Building the module is easy; just remember to link SDL and SDL_net. Because I used some C++11-features you currently need a compiler supporting C++11 (e.g. `--std=c++0x` for gcc). This will may be changed in the future depending on the mature purpose of this framework. You can build the example just by `g++ -o chatroom src/*.cpp example*.cpp -lSDL -lSDL_net --std=c++0x`. I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
 
 # Scheduled Changes
 ===
 
-- another example ("connect four")
 - detailed testing (e.g. for memory leaks)
 - documentation
 

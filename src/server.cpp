@@ -18,8 +18,9 @@ int server(void* param) {
     return 0;
 }
 
-Server::Server()
-    : next_id(0) {
+Server::Server(short max_clients)
+    : max_clients(max_clients)
+    , next_id(0) {
 }
 
 Server::~Server() {

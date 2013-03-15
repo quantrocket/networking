@@ -64,9 +64,10 @@ int server(void* param);
  */
 class Server {
     friend int server(void* param);
-    private:
+    protected:
         TcpListener listener;
         Thread thread;
+        short max_clients;
         // worker management
         ClientID next_id;
         std::map<ClientID, TcpLink*> links;
@@ -83,7 +84,7 @@ class Server {
         void logic();
     public:
         // server management
-        Server();
+        Server(short max_clients=-1);
         virtual ~Server();
         void start(unsigned short port);
         bool isOnline();
