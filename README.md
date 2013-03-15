@@ -5,12 +5,9 @@ This file is part of the networking module https://github.com/cgloeckner/network
 
 The source code is released under CC BY-NC 3.0. Feel free to share and remix this work while using it for non-commercial purpose only. Please mention me as the base of your work. Please read http://creativecommons.org/licenses/by-nc/3.0/ for further information.
 
-Kind regards
+Kind regards, Christian Glöckner
 
-Christian Glöckner
-
-
-# Event customization
+# Customizing events
 ===
 
 Events mustn't contain pointers or other high-level data which are based on pointers. This limitation is founded in the easy way the system is sending and receiving data over the network. There is no serialization of given events. Therefore each event has to use primitive value types only. Remember to serialize and unserialize all data on your own before inserting these data into your derived event.
@@ -23,22 +20,23 @@ To customize receiving events you need to implement the static Event-method `Eve
 
 Currently there is no UDP support. The server-client code is completly based on TCP only. I'm not shure whether I already need UDP, so it will stay disabled for a non-specified while.
 
-
 # Example
 ===
 
 You can find a server-client-based chatroom example in the directory `example/`. It shoulds the basic usage of a possible multiuser chatroom.
 
-
 # Building
 ===
 
-Building the module is easy; just remember to link SDL and SDL_net. Because I used some C++11-features you currently need a compiler supporting C++11 (e.g. `--std=c++0x` for gcc). This will may be changed in the future depending on the mature purpose of this framework. You can build the example just by `g++ -o chatroom src/*.cpp example*.cpp -lSDL -lSDL_net --std=c++0x`. I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
+Building the module is easy; just remember to link SDL and SDL_net. Because I used some C++11-features you currently need a compiler supporting C++11 (e.g. `--std=c++0x` for gcc). This will may be changed in the future depending on the mature purpose of this framework. You can build the example just by
 
+    g++ -o chatroom src/*.cpp example/*.cpp -lSDL -lSDL_net --std=c++0x
+
+I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
 # Scheduled Changes
 ===
 
 - detailed testing (e.g. for memory leaks)
 - documentation
-
+- easier event customization (e.g. generate are customized `events.hpp` from a XML-file using a Python-script)
