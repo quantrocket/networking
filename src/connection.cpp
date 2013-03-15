@@ -66,14 +66,20 @@ Link::~Link() {
 
 TcpLink::TcpLink()
     : Link(NULL)
+    , set(SDLNet_AllocSocketSet(1))
     , socket(NULL)
     , online(false) {
 }
 
 TcpLink::TcpLink(TCPsocket socket)
     : Link(NULL)
+    , set(SDLNet_AllocSocketSet(1))
     , socket(socket)
     , online(true) {
+    if (SDLNet_TCP_AddSocket(this->set, this->socket) == -1) {
+        SDLNet_FreeSocketSet(this->set);
+        throw NetworkError("SDLNet_TCP_AddSocket: " + std::string(SDLNet_GetError()));
+    }
     this->host = new Host(SDLNet_TCP_GetPeerAddress(socket));
 }
 
@@ -81,6 +87,7 @@ TcpLink::~TcpLink() {
     if (this->socket != NULL) {
         this->close();
     }
+    SDLNet_FreeSocketSet(this->set);
 }
 
 void TcpLink::open(const std::string& host, unsigned short port) {
@@ -92,12 +99,18 @@ void TcpLink::open(const std::string& host, unsigned short port) {
     if (this->socket == NULL) {
         throw NetworkError("SDLNet_TCP_Open: " + std::string(SDLNet_GetError()));
     }
+    if (SDLNet_TCP_AddSocket(this->set, this->socket) == -1) {
+        throw NetworkError("SDLNet_TCP_AddSocket: " + std::string(SDLNet_GetError()));
+    }
     this->online = true;
 }
 
 void TcpLink::close() {
     if (this->socket == NULL) {
         return;
+    }
+    if (SDLNet_TCP_DelSocket(this->set, this->socket) == -1) {
+        throw NetworkError("SDLNet_TCP_DelSocket: " + std::string(SDLNet_GetError()));
     }
     SDLNet_TCP_Close(this->socket);
     this->socket = NULL;
@@ -108,6 +121,15 @@ void TcpLink::close() {
 
 bool TcpLink::isOnline() {
     return this->online;
+}
+
+bool TcpLink::isReady() {
+    int numready = SDLNet_CheckSockets(set, 0);
+    if (numready == -1) {
+        throw NetworkError("SDLNet_CheckSockets: " + std::string(SDLNet_GetError()));
+    }
+    // there is just one socket in the set
+    return (numready == 1 && SDLNet_SocketReady(this->socket) != 0);
 }
 
 void TcpLink::send_ptr(void* data, std::size_t len) {
@@ -162,6 +184,10 @@ void TcpListener::open(unsigned short port) {
     if (this->socket == NULL) {
         throw NetworkError("SDLNet_TCP_Open: " + std::string(SDLNet_GetError()));
     }
+}
+
+bool TcpListener::isOnline() {
+    return (this->socket != NULL);
 }
 
 void TcpListener::close() {

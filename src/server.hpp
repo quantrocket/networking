@@ -13,28 +13,30 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include <list>
+#include <queue>
+#include <set>
 #include <map>
-#include <iostream>
 
+#include "threading.hpp"
 #include "connection.hpp"
 #include "eventsystem.hpp"
 
-class BaseServer;
+typedef unsigned short ClientID;
 
-typedef unsigned short WorkerID;
-
-class Worker {
+/// ClientData
+/** Contains a ClientID (as source or destination), an Event and the
+ *  event's size in bytes
+ */
+class ClientData {
     public:
-        WorkerID id;
-        TcpLink* link;
-        NetworkingQueue* queue;
-
-        Worker(WorkerID id, TcpLink* link);
-        virtual ~Worker();
+        ClientID id;
+        Event* event;
+        std::size_t size;
 };
 
-/// Base Server
+int server(void* param);
+
+/// Server
 /**
  *  The class provides primitive non-threaded Server-Client communication.
  *  Each client is handled by a worker using an id, the tcp link and the
@@ -60,53 +62,63 @@ class Worker {
  *  This might also be relevant for seperat accepting-clients-threads and the
  *  call of connect(), which will create a worker and append him to the map.
  */
-class BaseServer {
-    protected:
+class Server {
+    friend int server(void* param);
+    private:
         TcpListener listener;
+        Thread thread;
         // worker management
-        std::map<WorkerID, Worker*> workers;
-        WorkerID next_id;
-
-        // @note: The given event should be deleted after processing.
-        virtual void nofity(Worker* worker, Event* event) = 0;
+        ClientID next_id;
+        std::map<ClientID, TcpLink*> links;
+        Mutex workers;
+        // ip management
+        std::set<std::string> blocks;
+        Mutex ips;
+        // data management
+        std::queue<ClientData*> outgoing;
+        Mutex send;
+        std::queue<ClientData*> incomming;
+        Mutex recv;
         
-        virtual Worker* connect(TcpLink* link);
-        virtual void disconnect(Worker* worker);
-
+        void logic();
     public:
-        BaseServer(unsigned short port);
-        virtual ~BaseServer();
-
-        virtual void logic();
-        virtual void logic(Worker* worker);
-
-        template <typename TEvent> void push(TEvent* event);        
-        template <typename TEvent> void push(TEvent* event, WorkerID id);
+        // server management
+        Server();
+        virtual ~Server();
+        void start(unsigned short port);
+        bool isOnline();
+        void shutdown(bool immediately=false);
+        // worker management
+        void disconnect(ClientID id);
+        // ip management
+        void block(const std::string& ip);
+        void unblock(const std::string& ip);
+        // data management
+        ClientData* pop();
+        template <typename TEvent> void push(TEvent* event, ClientID id) {
+            // create bundle
+            ClientData* bundle = new ClientData();
+            bundle->id    = id;
+            bundle->event = event;
+            bundle->size  = sizeof(TEvent);
+            // push to queue
+            this->send.lock();
+            this->outgoing.push(bundle);
+            this->send.unlock();
+        }
+        template <typename TEvent> void push(TEvent* event) {
+            this->workers.lock();
+            auto node = this->links.begin();
+            while (node != this->links.end()) {
+                if (node->second != NULL && node->second->isOnline()) {
+                    // push to each worker
+                    this->push(event, node->first);
+                }
+                node++;
+            }
+            this->workers.unlock();
+        }
 };
 
-template <typename TEvent>
-void BaseServer::push(TEvent* event) {
-    if (event != NULL) {
-        for (auto node = this->workers.begin(); node != this->workers.end(); node++) {
-            if (node->second != NULL) {
-                // push event copy to worker (deleted after sending)
-                node->second->queue->push(new TEvent(event));
-            }
-        }
-        delete event;
-    }
-}
-
-template <typename TEvent>
-void BaseServer::push(TEvent* event, WorkerID id) {
-    if (event != NULL) {
-        auto node = this->workers.find(id);
-        if (node != this->workers.end() && node->second != NULL) {
-            // send to worker (deleted after sending)
-            node->second->queue->push(event);
-        }
-        // invalid workers are ignored        
-    }
-}
 
 #endif

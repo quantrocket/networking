@@ -96,6 +96,7 @@ class Link {
 class TcpLink: public Link {
     friend class TcpListener;
     protected:
+        SDLNet_SocketSet set;
         TCPsocket socket;
         bool online;
     public:
@@ -106,6 +107,7 @@ class TcpLink: public Link {
         void close();
         TcpLink* accept();
         bool isOnline();
+        bool isReady();
         
         void send_ptr(void* data, std::size_t len);
         void* receive_ptr(std::size_t len);
@@ -161,6 +163,7 @@ class TcpListener {
         TcpListener();
         virtual ~TcpListener();
         void open(unsigned short port);
+        bool isOnline();
         void close();
         TcpLink* accept();
 };

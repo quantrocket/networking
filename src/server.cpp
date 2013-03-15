@@ -12,71 +12,206 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "server.hpp"
 
-Worker::Worker(WorkerID id, TcpLink* link)
-    : id(id)
-    , link(link)
-    , queue(new NetworkingQueue(link)) {
+int server(void* param) {
+    Server* server = (Server*)param;
+    server->logic();
+    return 0;
 }
 
-Worker::~Worker() {
-    delete this->queue;
-    delete this->link;
-}
-
-// ----------------------------------------------------------------------------
-
-BaseServer::BaseServer(unsigned short port)
+Server::Server()
     : next_id(0) {
+}
+
+Server::~Server() {
+    this->shutdown(true);
+}
+
+void Server::logic() {
+    while (this->isOnline()) {
+        // try accept the next client
+        TcpLink* next_link = this->listener.accept();
+        if (next_link != NULL) {
+            // add worker
+            this->workers.lock();
+            ClientID id = this->next_id++;
+            this->links[id] = next_link;
+            this->workers.unlock();
+        }
+        // try send all outgoing bundles
+        this->send.lock();
+        while (!this->outgoing.empty()) {
+            // pop bundle
+            ClientData* bundle = this->outgoing.front();
+            this->outgoing.pop();
+            if (bundle == NULL) {
+                continue;
+            }
+            // get link
+            this->workers.lock();
+            TcpLink* link = NULL;
+            auto node = this->links.find(bundle->id);
+            if (node != this->links.end() && node->second != NULL && node->second->isOnline()) {
+                link = node->second;
+            } else {
+                // target not found
+                this->workers.unlock();
+                // discard bundle
+                delete bundle->event;
+                delete bundle;
+                continue;
+            }
+            // send
+            try {
+                link->send_data<std::size_t>(bundle->size);
+                link->send_ptr(bundle->event, bundle->size);
+            } catch (const BrokenPipe& broken_pipe) {
+                // connection to worker lost
+                this->workers.unlock();
+                // disconnect worker
+                this->disconnect(bundle->id);
+                // discard bundle
+                delete bundle->event;
+                delete bundle;
+            }
+            this->workers.unlock();
+        }
+        this->send.unlock();
+        // try receive some incomming bundles
+        this->workers.lock();
+        auto node = this->links.begin();
+        while (node != this->links.end()) {
+            if (node->second == NULL || !node->second->isOnline() || !node->second->isReady()) {
+                node++;
+                continue;
+            }
+            TcpLink* link = node->second;
+            ClientData* bundle = new ClientData();
+            bundle->id = node->first;;
+            try {
+                bundle->size = link->receive_data<std::size_t>();
+            } catch (const BrokenPipe& broken_pipe) {
+                // conection to worker lost
+                delete node->second;
+                node->second = NULL;
+                delete bundle;
+                node++;
+                continue;
+            }
+            if (bundle->size == 0) {
+                // not furthur data expected
+                delete bundle;
+                node++;
+                continue;
+            }
+            void* buffer = NULL;
+            try {
+                buffer = link->receive_ptr(bundle->size);
+            } catch (const BrokenPipe& broken_pipe) {
+                // connection to worker lost
+                delete node->second;
+                node->second = NULL;
+                delete bundle;
+                node++;
+                continue;
+            }
+            if (buffer == NULL) {
+                // no data got
+                free(buffer);
+                delete bundle;
+                node++;
+                continue;
+            }
+            // re-assemble event data
+            bundle->event = Event::assemble(buffer);
+            free(buffer);
+            if (bundle->event == NULL) {
+                // no event assembled
+                delete bundle;
+                node++;
+                continue;
+            }
+            // add bundle to system
+            this->recv.lock();
+            this->incomming.push(bundle);
+            this->recv.unlock();
+            // next worker
+            node++;
+        }
+        this->workers.unlock();
+        // Delay
+        SDL_Delay(100);
+    }
+}
+
+void Server::start(unsigned short port) {
+    if (this->isOnline()) {
+        return;
+    }    
+    // start listener
     this->listener.open(port);
+    this->thread.run(server, (void*)this);
 }
 
-BaseServer::~BaseServer() {
-    // disconnect workers
-    for (auto node = this->workers.begin(); node != this->workers.end(); node++) {
-        if (node->second != NULL) {
-            this->disconnect(node->second);
-        }
+bool Server::isOnline() {
+    return this->listener.isOnline();
+}
+
+void Server::shutdown(bool immediately) {
+    if (!this->isOnline()) {
+        return;
     }
+    // shutdown listener
     this->listener.close();
-}
-
-Worker* BaseServer::connect(TcpLink* link) {
-    if (link != NULL) {
-        // create worker
-        WorkerID id = this->next_id++;
-        Worker* worker = new Worker(id, link);
-        this->workers[worker->id] = worker;
-        return worker;
+    if (immediately == true) {
+        this->thread.kill();
     } else {
-        return NULL;
+        this->thread.wait();
     }
+    // close and delete worker links
+    for (auto node = this->links.begin(); node != this->links.end(); node++) {
+        delete node->second;
+    }
+    this->links.clear();
+    this->next_id = 0;
 }
 
-void BaseServer::disconnect(Worker* worker) {
-    if (worker != NULL) {
-        // wait until outgoing queue is empty
-        while (!worker->queue->isEmpty()) {
-            SDL_Delay(DELAY_ON_EMPTY);
-        }
-        // delete and remove worker
-        this->workers.erase(this->workers.find(worker->id));
-        delete worker;
+void Server::disconnect(ClientID id) {
+    this->workers.lock();
+    auto node = this->links.find(id);
+    if (node != this->links.end()) {
+        // close and destroy link
+        delete node->second;
+        // remove from server
+        this->links.erase(node);
     }
+    this->workers.unlock();
 }
 
-void BaseServer::logic() {
-    TcpLink* incomming = this->listener.accept();
-    if (incomming != NULL) {
-        this->connect(incomming);
-    }
+void Server::block(const std::string& ip) {
+    this->ips.lock();
+    this->blocks.insert(ip);
+    this->ips.unlock();
 }
 
-void BaseServer::logic(Worker* worker) {
-    if (worker != NULL && worker->link->isOnline()) {
-        Event* next = worker->queue->pop();
-        if (next != NULL) {
-            this->nofity(worker, next);
-        }
+void Server::unblock(const std::string& ip) {
+    this->ips.lock();
+    auto node = this->blocks.find(ip);
+    if (node != this->blocks.end()) {
+        this->blocks.erase(node);
     }
+    this->ips.unlock();
 }
+
+ClientData* Server::pop() {
+    ClientData* tmp = NULL;
+    this->recv.lock();
+    if (!this->incomming.empty()) {
+        tmp = this->incomming.front();
+        this->incomming.pop();
+    }
+    this->recv.unlock();
+    return tmp;
+}
+
+
 

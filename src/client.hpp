@@ -13,31 +13,52 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
+#include <queue>
+
+#include "threading.hpp"
 #include "connection.hpp"
 #include "eventsystem.hpp"
 
-class BaseClient {
-    friend int client_handler(void* param);
-    protected:
-        TcpLink link;
-        NetworkingQueue* queue;
+int client(void* param);
 
-        virtual void nofity(Event* event) = 0;
+class ServerData {
     public:
-        BaseClient(std::string hostname, unsigned short port);
-        virtual ~BaseClient();
-        
-        virtual void logic();
-
-        template <typename TEvent> void push(TEvent* event);
+        Event* event;
+        std::size_t size;
 };
 
-template <typename TEvent>
-void BaseClient::push(TEvent* event) {
-    if (event != NULL) {
-        this->queue->push(event);
-    }
-}
+class Client {
+    friend int client(void* param);
+    private:
+        TcpLink link;
+        Thread thread;
+        // data management
+        std::queue<ServerData*> outgoing;
+        Mutex send;
+        std::queue<ServerData*> incomming;
+        Mutex recv;
+        
+        void logic();
+    public:
+        // connection management
+        Client();
+        virtual ~Client();
+        void connect(const std::string& ip, unsigned short port);
+        bool isOnline();
+        void disconnect(bool immediately=false);
+        // data management
+        ServerData* pop();
+        template <typename TEvent> void push(TEvent* event) {
+            // create bundle
+            ServerData* bundle = new ServerData();
+            bundle->event = event;
+            bundle->size  = sizeof(TEvent);
+            // push to queue
+            this->send.lock();
+            this->outgoing.push(bundle);
+            this->send.unlock();
+        } 
+};
 
 
 #endif
