@@ -12,128 +12,131 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "client.hpp"
 
-int client(void* param) {
-    Client* client = (Client*) param;
-    client->logic();
-    return 0;
-}
+namespace networking {
 
-Client::Client() {
-}
+    int client(void* param) {
+        Client* client = (Client*) param;
+        client->logic();
+        return 0;
+    }
 
-Client::~Client() {
-    this->disconnect(true);
-}
+    Client::Client() {
+    }
 
-void Client::logic() {
-    while (this->isOnline()) {
-        // try send all outgoing bundles
-        this->send.lock();
-        while (!this->outgoing.empty()) {
-            // pop bundle
-            ServerData* bundle = this->outgoing.front();
-            this->outgoing.pop();
-            if (bundle == NULL) {
-                continue;
-            }
-            // send
-            try {
-                this->link.send_data<std::size_t>(bundle->size);
-                this->link.send_ptr(bundle->event, bundle->size);
-            } catch (const BrokenPipe& broken_pipe) {
-                // connection to server lost
-                this->send.unlock();
-                // discard bundle
-                delete bundle->event;
-                delete bundle;
-                return;
-            }
-        }
-        this->send.unlock();
-        //  try receive some incomming bundles
-        int recv_limit = 10; // @todo: use client->recv_limit;
-        do {
-            recv_limit--;
-            if (this->link.isReady()) {
-                ServerData* bundle = new ServerData();
-                try {
-                    bundle->size = this->link.receive_data<std::size_t>();
-                } catch (const BrokenPipe& broken_pipe) {
-                    // connection to server lost
-                    delete bundle;
-                    return;
-                }
-                if (bundle->size == 0) {
-                    // no furthur data expected
-                    delete bundle;
+    Client::~Client() {
+        this->disconnect(true);
+    }
+
+    void Client::logic() {
+        while (this->isOnline()) {
+            // try send all outgoing bundles
+            this->send.lock();
+            while (!this->outgoing.empty()) {
+                // pop bundle
+                ServerData* bundle = this->outgoing.front();
+                this->outgoing.pop();
+                if (bundle == NULL) {
                     continue;
                 }
-                void* buffer = NULL;
+                // send
                 try {
-                    buffer = this->link.receive_ptr(bundle->size);
+                    this->link.send_data<std::size_t>(bundle->size);
+                    this->link.send_ptr(bundle->event, bundle->size);
                 } catch (const BrokenPipe& broken_pipe) {
                     // connection to server lost
+                    this->send.unlock();
+                    // discard bundle
+                    delete bundle->event;
                     delete bundle;
                     return;
                 }
-                if (buffer == NULL) {
-                    // no data got
+            }
+            this->send.unlock();
+            //  try receive some incomming bundles
+            int recv_limit = 10; // @todo: use client->recv_limit;
+            do {
+                recv_limit--;
+                if (this->link.isReady()) {
+                    ServerData* bundle = new ServerData();
+                    try {
+                        bundle->size = this->link.receive_data<std::size_t>();
+                    } catch (const BrokenPipe& broken_pipe) {
+                        // connection to server lost
+                        delete bundle;
+                        return;
+                    }
+                    if (bundle->size == 0) {
+                        // no furthur data expected
+                        delete bundle;
+                        continue;
+                    }
+                    void* buffer = NULL;
+                    try {
+                        buffer = this->link.receive_ptr(bundle->size);
+                    } catch (const BrokenPipe& broken_pipe) {
+                        // connection to server lost
+                        delete bundle;
+                        return;
+                    }
+                    if (buffer == NULL) {
+                        // no data got
+                        free(buffer);
+                        delete bundle;
+                        continue;
+                    }
+                    // re-assemble event data
+                    bundle->event = Event::assemble(buffer);
                     free(buffer);
-                    delete bundle;
-                    continue;
+                    if (bundle->event == NULL) {
+                        // no event assembled
+                        continue;
+                    }
+                    // add bundle to system
+                    this->recv.lock();
+                    this->incomming.push(bundle);
+                    this->recv.unlock();
                 }
-                // re-assemble event data
-                bundle->event = Event::assemble(buffer);
-                free(buffer);
-                if (bundle->event == NULL) {
-                    // no event assembled
-                    continue;
-                }
-                // add bundle to system
-                this->recv.lock();
-                this->incomming.push(bundle);
-                this->recv.unlock();
-            }
-        } while (recv_limit >= 0);
+            } while (recv_limit >= 0);
+        }
+        SDL_Delay(100);
     }
-    SDL_Delay(100);
-}
 
-void Client::connect(const std::string& ip, unsigned short port) {
-    if (this->isOnline()) {
-        return;
+    void Client::connect(const std::string& ip, unsigned short port) {
+        if (this->isOnline()) {
+            return;
+        }
+        // open connection
+        this->link.open(ip, port);
+        this->thread.run(client, (void*)this);
     }
-    // open connection
-    this->link.open(ip, port);
-    this->thread.run(client, (void*)this);
-}
 
-bool Client::isOnline() {
-    return this->link.isOnline();
-}
-
-void Client::disconnect(bool immediately) {
-    if (!this->isOnline()) {
-        return;
+    bool Client::isOnline() {
+        return this->link.isOnline();
     }
-    // close connection
-    this->link.close();
-    if (immediately == true) {
-        this->thread.kill();
-    } else {
-        this->thread.wait();
-    }
-}
 
-ServerData* Client::pop() {
-    ServerData* tmp = NULL;
-    this->recv.lock();
-    if (!this->incomming.empty()) {
-        tmp = this->incomming.front();
-        this->incomming.pop();
+    void Client::disconnect(bool immediately) {
+        if (!this->isOnline()) {
+            return;
+        }
+        // close connection
+        this->link.close();
+        if (immediately == true) {
+            this->thread.kill();
+        } else {
+            this->thread.wait();
+        }
     }
-    this->recv.unlock();
-    return tmp;
-}
 
+    ServerData* Client::pop() {
+        ServerData* tmp = NULL;
+        this->recv.lock();
+        if (!this->incomming.empty()) {
+            tmp = this->incomming.front();
+            this->incomming.pop();
+        }
+        this->recv.unlock();
+        return tmp;
+    }
+
+}
 

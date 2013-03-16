@@ -12,15 +12,19 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "eventsystem.hpp"
 
-Event::Event()
-    : event_id(E_GENERIC) {
-}
+namespace networking {
 
-Event::Event(EventID event_id)
-    : event_id(event_id) {
-}
+    Event::Event()
+        : event_id(E_GENERIC) {
+    }
 
-Event::Event(Event* other)
-    : event_id(other->event_id) {
+    Event::Event(EventID event_id)
+        : event_id(event_id) {
+    }
+
+    Event::Event(Event* other)
+        : event_id(other->event_id) {
+    }
+
 }
 

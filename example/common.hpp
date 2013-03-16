@@ -16,10 +16,14 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #include <iostream>
 #include <string.h>
 
-#include "../../src/eventsystem.hpp"
-#include "../../src/connection.hpp"
-#include "../../src/client.hpp"
-#include "../../src/server.hpp"
+#include "../src/eventsystem.hpp"
+#include "../src/connection.hpp"
+#include "../src/client.hpp"
+#include "../src/server.hpp"
+
+using networking::EventID;
+using networking::Event;
+using networking::ClientID;
 
 const EventID E_LOGIN_REQUEST    = 1;
 const EventID E_LOGIN_RESPONSE   = 2;

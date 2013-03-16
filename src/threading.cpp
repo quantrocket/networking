@@ -12,51 +12,54 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "threading.hpp"
 
-Mutex::Mutex() {
-    this->mutex = SDL_CreateMutex();
-}
+namespace networking {
 
-Mutex::~Mutex() {
-    SDL_DestroyMutex(this->mutex);
-}
-
-void Mutex::lock() {
-    SDL_LockMutex(this->mutex);
-}
-
-void Mutex::unlock() {
-    SDL_UnlockMutex(this->mutex);
-}
-
-// ----------------------------------------------------------------------------
-
-Thread::Thread()
-    : thread(NULL) {
-}
-
-Thread::~Thread() {
-    if (this->thread != NULL) {
-        this->kill();
+    Mutex::Mutex() {
+        this->mutex = SDL_CreateMutex();
     }
-}
 
-void Thread::run(int (*func)(void*), void* param) {
-    if (this->thread != NULL) {
-        this->kill();
+    Mutex::~Mutex() {
+        SDL_DestroyMutex(this->mutex);
     }
-    this->thread = SDL_CreateThread(func, param);
-}
 
-int Thread::wait() {
-    int status = 0;
-    SDL_WaitThread(this->thread, &status);
-    this->thread = NULL;
-    return status;
-}
+    void Mutex::lock() {
+        SDL_LockMutex(this->mutex);
+    }
 
-void Thread::kill() {
-    SDL_KillThread(this->thread);
-    this->thread = NULL;
-}
+    void Mutex::unlock() {
+        SDL_UnlockMutex(this->mutex);
+    }
 
+    // ------------------------------------------------------------------------
+
+    Thread::Thread()
+        : thread(NULL) {
+    }
+
+    Thread::~Thread() {
+        if (this->thread != NULL) {
+            this->kill();
+        }
+    }
+
+    void Thread::run(int (*func)(void*), void* param) {
+        if (this->thread != NULL) {
+            this->kill();
+        }
+        this->thread = SDL_CreateThread(func, param);
+    }
+
+    int Thread::wait() {
+        int status = 0;
+        SDL_WaitThread(this->thread, &status);
+        this->thread = NULL;
+        return status;
+    }
+
+    void Thread::kill() {
+        SDL_KillThread(this->thread);
+        this->thread = NULL;
+    }
+
+}
 

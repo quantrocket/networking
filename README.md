@@ -40,3 +40,5 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 - detailed testing (e.g. for memory leaks)
 - documentation
 - easier event customization (e.g. generate are customized `events.hpp` from a XML-file using a Python-script)
+- single- and multithreading server support (`enum Threading { SINGLE_THREADING, MULTITHREADING };`)
+

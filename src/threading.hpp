@@ -17,62 +17,66 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include <SDL/SDL.h>
 
-class Mutex {
-    protected:
-        SDL_mutex* mutex;
-    public:
-        Mutex();
-        virtual ~Mutex();
-        void lock();
-        void unlock();
-};
+namespace networking {
 
-class Thread {
-    protected:
-        SDL_Thread* thread;
-    public:
-        Thread();
-        virtual ~Thread();
-        void run(int (*func)(void*), void* param);
-        int wait();
-        void kill();
-};
+    class Mutex {
+        protected:
+            SDL_mutex* mutex;
+        public:
+            Mutex();
+            virtual ~Mutex();
+            void lock();
+            void unlock();
+    };
 
-/*
-/// Thread-Safe Queue
-template <typename Data>
-class ThreadSafeQueue {
-    protected:
-        Mutex mutex;
-        std::queue<Data*> data;
-    public:
-        ThreadSafeQueue() {
-        }
-        virtual ~ThreadSafeQueue() {
-        }
-        void push(Data* data) {
-            this->mutex.lock();
-            this->data.push(data);
-            this->mutex.unlock();
-        }
-        Data* pop() {
-            Data* tmp = NULL;
-            this->mutex.lock();
-            if (!this->data.empty()) {
-                tmp = this->data.front();
-                this->data.pop();
+    class Thread {
+        protected:
+            SDL_Thread* thread;
+        public:
+            Thread();
+            virtual ~Thread();
+            void run(int (*func)(void*), void* param);
+            int wait();
+            void kill();
+    };
+
+    /*
+    /// Thread-Safe Queue
+    template <typename Data>
+    class ThreadSafeQueue {
+        protected:
+            Mutex mutex;
+            std::queue<Data*> data;
+        public:
+            ThreadSafeQueue() {
             }
-            this->mutex.unlock();
-            return tmp;
-        }
-        bool isEmpty() {
-            bool empty;
-            this->mutex.lock();
-            empty = this->data.empty();
-            this->mutex.unlock();
-        }
-};
-*/
+            virtual ~ThreadSafeQueue() {
+            }
+            void push(Data* data) {
+                this->mutex.lock();
+                this->data.push(data);
+                this->mutex.unlock();
+            }
+            Data* pop() {
+                Data* tmp = NULL;
+                this->mutex.lock();
+                if (!this->data.empty()) {
+                    tmp = this->data.front();
+                    this->data.pop();
+                }
+                this->mutex.unlock();
+                return tmp;
+            }
+            bool isEmpty() {
+                bool empty;
+                this->mutex.lock();
+                empty = this->data.empty();
+                this->mutex.unlock();
+            }
+    };
+    */
+
+}
 
 #endif
 

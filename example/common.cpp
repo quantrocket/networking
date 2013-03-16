@@ -12,9 +12,9 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "common.hpp"
 
-Event* Event::assemble(void* buffer) {
-    Event* event = reinterpret_cast<Event*>(buffer);
-    EventID id = event->event_id;
+networking::Event* networking::Event::assemble(void* buffer) {
+    networking::Event* event = reinterpret_cast<networking::Event*>(buffer);
+    networking::EventID id = event->event_id;
     switch (id) {
         case E_LOGIN_REQUEST:
             event = new LoginRequest((LoginRequest*)buffer);

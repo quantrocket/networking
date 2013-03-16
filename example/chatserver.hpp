@@ -20,10 +20,10 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 int server_handler(void* param);
 
-class ChatServer: public Server {
+class ChatServer: public networking::Server {
     friend int server_handler(void* param);
     protected:
-        Thread handler;
+        networking::Thread handler;
         
         std::map<ClientID, std::string> users;
 

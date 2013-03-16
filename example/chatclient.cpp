@@ -19,7 +19,7 @@ int client_handler(void* param) {
 }
 
 ChatClient::ChatClient(const std::string& ip, unsigned short port)
-    : Client() {
+    : networking::Client() {
     this->authed = false;
     this->connect(ip, port);
     this->handler.run(client_handler, (void*)this);
@@ -34,7 +34,7 @@ ChatClient::~ChatClient() {
 void ChatClient::handle() {
     while (this->isOnline()) {
         // wait for next bundle
-        ServerData* bundle = NULL;
+        networking::ServerData* bundle = NULL;
         while (bundle == NULL) {
             SDL_Delay(50),
             bundle = this->pop();

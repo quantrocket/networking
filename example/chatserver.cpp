@@ -19,7 +19,7 @@ int server_handler(void* param) {
 }
 
 ChatServer::ChatServer(unsigned short port)
-    : Server() {
+    : networking::Server() {
     this->start(port);
     this->handler.run(server_handler, (void*)this);
     std::cout << "Server started" << std::endl;
@@ -33,7 +33,7 @@ ChatServer::~ChatServer() {
 void ChatServer::handle() {
     while (this->isOnline()) {
         // wait for next bundle
-        ClientData* bundle = NULL;
+        networking::ClientData* bundle = NULL;
         while (bundle == NULL) {
             SDL_Delay(50);
             bundle = this->pop();
