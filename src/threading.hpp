@@ -33,6 +33,8 @@ namespace networking {
             void unlock();
     };
 
+    // ------------------------------------------------------------------------
+
     class Thread {
         protected:std::thread thread;
         public:
@@ -47,6 +49,8 @@ namespace networking {
             void stop();
     };
 
+    // ------------------------------------------------------------------------
+
     /// Thread-Safe Queue
     template <typename Data>
     class ThreadSafeQueue {
@@ -57,6 +61,15 @@ namespace networking {
             ThreadSafeQueue() {
             }
             virtual ~ThreadSafeQueue() {
+            }
+            void clear() {
+                this->mutex.lock();
+                while (!this->data.empty()) {
+                    Data* tmp = this->data.front();
+                    delete tmp;
+                    this->data.pop();
+                }
+                this->mutex.unlock();
             }
             void push(Data* data) {
                 this->mutex.lock();
@@ -74,10 +87,8 @@ namespace networking {
                 return tmp;
             }
             bool isEmpty() {
-                bool empty;
-                this->mutex.lock();
-                empty = this->data.empty();
-                this->mutex.unlock();
+                // seems nearly atomic to me
+                return this->data.empty();
             }
     };
 

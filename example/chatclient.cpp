@@ -25,44 +25,41 @@ ChatClient::ChatClient(const std::string& ip, unsigned short port)
 }
 
 ChatClient::~ChatClient() {
+    this->link.close();
     this->handler.stop();
-    std::cout << "Client stopped" << std::endl;
 }
 
 void ChatClient::handle() {
     while (this->isOnline()) {
         // wait for next bundle
-        networking::ServerData* bundle = NULL;
-        while (bundle == NULL) {
-            SDL_Delay(50),
-            bundle = this->pop();
+        networking::Bundle* bundle = this->pop();
+        if (bundle != NULL) {
+            // handle bundle
+            switch (bundle->event->event_id) {
+                case E_LOGIN_RESPONSE:
+                    this->login((LoginResponse*)(bundle->event));
+                    break;
+                case E_MESSAGE_RESPONSE:
+                    this->message((MessageResponse*)(bundle->event));
+                    break;
+                case E_LOGOUT_RESPONSE:
+                    this->logout((LogoutResponse*)(bundle->event));
+                    break;
+                case E_USERLIST_UPDATE:
+                    this->update((UserlistUpdate*)(bundle->event));
+            }
+            delete bundle;
+        } else {
+            networking::delay(15);
         }
-        // handle bundle
-        switch (bundle->event->event_id) {
-            case E_LOGIN_RESPONSE:
-                this->login((LoginResponse*)(bundle->event));
-                break;
-            case E_MESSAGE_RESPONSE:
-                this->message((MessageResponse*)(bundle->event));
-                break;
-            case E_LOGOUT_RESPONSE:
-                this->logout((LogoutResponse*)(bundle->event));
-                break;
-            case E_USERLIST_UPDATE:
-                this->update((UserlistUpdate*)(bundle->event));
-        }
-        // delete bundle
-        delete bundle->event;
-        delete bundle;
     }
 }
 
 void ChatClient::login(LoginResponse* data) {
-    if (!this->authed) {
+    if (!this->authed && data->id == this->id) {
         if (data->success) {
             this->username = data->username;
             this->authed = data->success;
-            this->id = data->id;
             this->users[data->id] = data->username;
             std::cout << "You entered the chat as '" << data->username << "'"
                       << std::endl;
@@ -85,9 +82,9 @@ void ChatClient::logout(LogoutResponse* data) {
     if (this->authed && data->id == this->id) {
         std::cout << "You are leaving the chat." << std::endl;
         this->authed = false;
-        this->id = 0;
         this->username = "";
         this->users.clear();
+        this->link.close();
     }
 }
 

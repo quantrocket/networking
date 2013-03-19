@@ -40,10 +40,9 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 - detailed testing (e.g. for memory leaks)
 - documentation
 - easier event customization (e.g. generate are customized `events.hpp` from a XML-file using a Python-script)
-- single- and multithreading server support (`enum Threading { SINGLE_THREADING, MULTITHREADING };`)
 
+- boost::asio instead SDL_net ?
 - Endianness?
-- Fix-sized types for events? (32-bit / 64-bit; http://en.cppreference.com/w/cpp/types/integer)
 - Serialization?
 
 

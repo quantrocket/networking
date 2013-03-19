@@ -3,3 +3,5 @@ chatroom
 *~
 src/*~
 example/*~
+bin/*
+networking.cbp

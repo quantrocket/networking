@@ -22,8 +22,15 @@ int main(int argc, char **argv) {
 
     ChatServer* server = NULL;
     ChatClient* client = NULL;
-    bool all = false;
-    unsigned int target = 0;
+
+    if (SDL_Init(0) == -1) {
+        std::cerr << "SDL_Init: " << SDL_GetError() << std::endl;
+        return 1;
+    }
+    if (SDLNet_Init() == -1) {
+        std::cerr << "SDLNet_Init: " << SDLNet_GetError() << std::endl;
+        return 1;
+    }
 
     switch (argc) {
         case 2:
@@ -38,11 +45,11 @@ int main(int argc, char **argv) {
             delete server;
             break;
         case 3:
-            client = new ChatClient(argv[1], (unsigned short)(atoi(argv[2])));
             std::cout << "Username: ";
             getline(std::cin, input);
+            client = new ChatClient(argv[1], (unsigned short)(atoi(argv[2])));
             client->push(new LoginRequest(input));
-            while (true) {
+            while (client->isOnline()) {
                 getline(std::cin, input);
                 if (!client->authed) { continue; }
                 if (input == "quit") {
@@ -58,6 +65,9 @@ int main(int argc, char **argv) {
                       << "\tdemo hostname port\t(start client)" << std::endl
                       << "\tdemo port\t\t(start server)" << std::endl;
     }
+
+    SDLNet_Quit();
+    SDL_Quit();
 }
 
 

@@ -19,8 +19,7 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "../src/eventsystem.hpp"
 #include "../src/connection.hpp"
-#include "../src/client.hpp"
-#include "../src/server.hpp"
+#include "../src/serverclient.hpp"
 
 using networking::EventID;
 using networking::Event;
@@ -40,7 +39,7 @@ struct LoginRequest: public Event {
     LoginRequest(const std::string& username) : Event(E_LOGIN_REQUEST) {
         strncpy(this->username, username.c_str(), 255);
     }
-    
+
     LoginRequest(LoginRequest* other) : Event(E_LOGIN_REQUEST) {
         strncpy(this->username, other->username, 255);
     }
@@ -57,7 +56,7 @@ struct LoginResponse: public Event {
         this->id = id;
         strncpy(this->username, username.c_str(), 255);
     }
-    
+
     LoginResponse(LoginResponse* other) : Event(E_LOGIN_RESPONSE) {
         this->success = other->success;
         this->id      = other->id;
@@ -67,11 +66,11 @@ struct LoginResponse: public Event {
 
 struct MessageRequest: public Event {
     char text[20000];
-    
+
     MessageRequest(const std::string& text) : Event(E_MESSAGE_REQUEST) {
         strncpy(this->text, text.c_str(), 20000);
     }
-    
+
     MessageRequest(MessageRequest* other) : Event(E_MESSAGE_REQUEST) {
         strncpy(this->text, other->text, 20000);
     }
@@ -80,13 +79,13 @@ struct MessageRequest: public Event {
 struct MessageResponse: public Event {
     char text[20000];
     ClientID id;
-    
+
     MessageResponse(const std::string& text, ClientID id)
         : Event(E_MESSAGE_RESPONSE) {
         strncpy(this->text, text.c_str(), 20000);
         this->id = id;
     }
-    
+
     MessageResponse(MessageResponse* other) : Event(E_MESSAGE_RESPONSE) {
         strncpy(this->text, other->text, 20000);
         this->id = other->id;
@@ -116,7 +115,7 @@ struct UserlistUpdate: public Event {
     bool add; // false == remove
     ClientID id;
     char username[255];
-    
+
     UserlistUpdate(bool add, ClientID id, const std::string& username)
         : Event(E_USERLIST_UPDATE) {
         this->add = add;

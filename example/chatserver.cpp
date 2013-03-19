@@ -24,6 +24,7 @@ ChatServer::ChatServer(unsigned short port)
 }
 
 ChatServer::~ChatServer() {
+    this->listener.close();
     this->handler.stop();
     std::cout << "Server stopped" << std::endl;
 }
@@ -31,26 +32,24 @@ ChatServer::~ChatServer() {
 void ChatServer::handle() {
     while (this->isOnline()) {
         // wait for next bundle
-        networking::ClientData* bundle = NULL;
-        while (bundle == NULL) {
-            SDL_Delay(50);
-            bundle = this->pop();
+        networking::Bundle* bundle = this->pop();
+        if (bundle != NULL) {
+            // handle bundle
+            switch (bundle->event->event_id) {
+                case E_LOGIN_REQUEST:
+                    this->login((LoginRequest*)(bundle->event), bundle->id);
+                    break;
+                case E_LOGOUT_REQUEST:
+                    this->logout((LogoutRequest*)(bundle->event), bundle->id);
+                    break;
+                case E_MESSAGE_REQUEST:
+                    this->message((MessageRequest*)(bundle->event), bundle->id);
+                    break;
+            }
+            delete bundle;
+        } else {
+            networking::delay(15);
         }
-        // handle bundle
-        switch (bundle->event->event_id) {
-            case E_LOGIN_REQUEST:
-                this->login((LoginRequest*)(bundle->event), bundle->id);
-                break;
-            case E_LOGOUT_REQUEST:
-                this->logout((LogoutRequest*)(bundle->event), bundle->id);
-                break;
-            case E_MESSAGE_REQUEST:
-                this->message((MessageRequest*)(bundle->event), bundle->id);
-                break;
-        }
-        // delete bundle
-        delete bundle->event;
-        delete bundle;
     }
 }
 

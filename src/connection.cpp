@@ -141,7 +141,7 @@ namespace networking {
             throw BrokenPipe();
         }
         int sent = SDLNet_TCP_Send(this->socket, data, len);
-        if (sent < len) {
+        if (sent < (int)len) {
             // error while sending
             this->online = false;
             throw BrokenPipe();
@@ -165,7 +165,7 @@ namespace networking {
         return buffer;
     }
 
-    // ---------------------------------------------------------------------------- 
+    // ----------------------------------------------------------------------------
 
     TcpListener::TcpListener()
         : socket(NULL) {

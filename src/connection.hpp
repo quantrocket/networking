@@ -59,7 +59,7 @@ namespace networking {
      */
     struct Host {
         IPaddress* addr;
-        
+
         Host(const std::string& host, unsigned short port);
         Host(unsigned short port);
         Host(IPaddress* addr);
@@ -80,7 +80,7 @@ namespace networking {
     class Link {
         public:
             Host* host;
-            
+
             Link(Host* host=NULL);
             virtual ~Link();
             virtual void close() = 0;
@@ -110,7 +110,7 @@ namespace networking {
             TcpLink* accept();
             bool isOnline();
             bool isReady();
-            
+
             void send_ptr(void* data, std::size_t len);
             void* receive_ptr(std::size_t len);
 
@@ -122,7 +122,7 @@ namespace networking {
                 }
                 std::size_t len = sizeof(Data);
                 int sent = SDLNet_TCP_Send(this->socket, &data, len);
-                if (sent < len) {
+                if (sent < int(len)) {
                     // error while sending
                     this->online = false;
                     throw BrokenPipe();
@@ -152,7 +152,7 @@ namespace networking {
      *  This class is listening for new TCP links. You can accept incomming clients
      *  using accept(). Whether accept is blocking is determined by a bool flag
      *  that can be accessed using blocking() and blocking(bool).
-     *  
+     *
      *  The methods
      *      open(unsigned short port)
      *      close()

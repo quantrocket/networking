@@ -37,10 +37,9 @@ class ChatClient: public networking::Client {
     public:
         ChatClient(const std::string& ip, unsigned short port);
         virtual ~ChatClient();
-        
+
         bool authed;
-        ClientID id;
-        std::string username; 
+        std::string username;
 };
 
 #endif
