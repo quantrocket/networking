@@ -29,7 +29,8 @@ namespace networking {
         public:
             NetworkError(const std::string& msg) throw() {
                 this->msg = msg;
-                std::cout << "Networking error occured: " << this->msg << std::endl;
+                std::cerr << "Networking error occured: "
+                          << this->msg << std::endl;
             }
             virtual ~NetworkError() throw() {}
             virtual const char* what() const throw() {
@@ -44,7 +45,8 @@ namespace networking {
         public:
             BrokenPipe() throw() {
                 this->msg = "Broken pipe";
-                std::cout << "Networking error occured: " << this->msg << std::endl;
+                std::cerr << "Networking error occured: "
+                          << this->msg << std::endl;
             }
             virtual ~BrokenPipe() throw() {}
             virtual const char* what() const throw() {
@@ -58,62 +60,123 @@ namespace networking {
      *  port number in an easier way.
      */
     struct Host {
+        /// ip-address structure (from SDL_net)
         IPaddress* addr;
-
+        /// Constructor resolving host and port
+        /**
+         * This resolves the given hostname and port number and creates the
+         *  IPaddress object
+         *  @param host: remote hostname
+         *  @param post: remote port number
+         */
         Host(const std::string& host, unsigned short port);
+        /// Constructor resolving a port on localhost
+        /**
+         * This is used by servers to resolve a port on the local machine
+         *  @param port: own port number
+         */
         Host(unsigned short port);
+        /// Constructor using a given IP-address
+        /**
+         * Creates an exact copy of the given IPaddress object.
+         *  @param addr: ip address object to copy
+         */
         Host(IPaddress* addr);
+        /// Destructor
         ~Host();
+        /// Get IP-address or hostname
+        /**
+         * Returns the IP-address or hostname of this host.
+         *  @return IP-adress or hostname as string
+         */
         std::string ip();
+        /// Get port number
+        /**
+         * Returns the port number of this host.
+         *  @param port number
+         */
         unsigned short port();
     };
 
-    /// An abstract class for network communication
+    /// A link class based on a TCP-socket
     /**
-     *  The method send(void* data, int len) sends the given pointer using the
-     *  given length to the link. It sends the length first, then the actual
-     *  data. Using receive() will read the given length and allocate the necessary
-     *  memory. It will read the actual data and return it.
-     *
-     *  Additionally, there are template methods for sending and receiving.
+     * This class handles the communication using a TCP socket. An instance of
+     *  this class can send and receive data with a fixed size or a pointer
+     *  with a given length.
      */
-    class Link {
-        public:
-            Host* host;
-
-            Link(Host* host=NULL);
-            virtual ~Link();
-            virtual void close() = 0;
-    };
-
-    /// A link class based on a TCP socket
-    /**
-     *  This class handles the communication using a TCP socket.
-     *
-     *  An instance of this class can send and receive data. The methods
-     *      open(const std::string& host, unsigned int port)
-     *      close()
-     *  can be used to connect/disconnect the link.
-     */
-    class TcpLink: public Link {
+    class TcpLink {
         friend class TcpListener;
         protected:
+            /// socket set used for non-blocking receive
             SDLNet_SocketSet set;
+            /// actual TCP-socket
             TCPsocket socket;
+            /// Describes whether the link is online or not
             bool online;
         public:
+            /// Constructor for an offline link
             TcpLink();
+            /// Constructor for an online, given link
+            /**
+             * Creates the link from a given TCP-socket.
+             *  @param socket: TCP-socket to use
+             */
             TcpLink(TCPsocket socket);
+            /// Destructor
             virtual ~TcpLink();
+            /// Opens the connection to a host on a port
+            /**
+             * Resolves the host and establishs a connection. The local port
+             *  number is assigned automatically.
+             *  @param host: remote hostname
+             *  @param port: remote port number
+             */
             void open(const std::string& host, unsigned short port);
+            /// Closes the connection
             void close();
-            TcpLink* accept();
+            /// Returns whether the link is online or not
+            /**
+             * Returns whether the link is online or not. A previously broken
+             *  pipe automatically sets a link to offline
+             *  @return true if online
+             */
             bool isOnline();
+            /// Returns whether there is activity on the socket
+            /**
+             * Describes whether there is activity on the socket. This uses a
+             *  socket set with this socket inside it. This method can be used
+             *  to check the socket for activity to allow non-blocking receive.
+             */
             bool isReady();
-
+            /// Send a pointer with fixed size
+            /**
+             * This allows to send pointer data with a fixed length.
+             *  If the connection is lost, this method will set the link to
+             *  offline and throw a "BrokenPipe" exception.
+             *  @param data: pointer to data
+             *  @param len: length of data
+             */
             void send_ptr(void* data, std::size_t len);
+            /// Receive a pointer with fixed size
+            /**
+             * This allows to receive pointer data with a fixed length.
+             *  If the connection is lost, this method will set the link to
+             *  offline and throw a "BrokenPipe" exception. It also will return
+             *  NULL in this case.
+             *  Consider, that this method will block until the data can be
+             *  read from the socket. Use isReady() to check for incomming
+             *  data to allow non-blocking receive.
+             *  @param len: length of data
+             *  @return pointer to data or NULL
+             */
             void* receive_ptr(std::size_t len);
-
+            /// Send data of a specific type
+            /**
+             * This allows to send data of a specific type Data. If the
+             *  connection is lost, this method will set the link to offline
+             *  and throw a "BrokenPipe" exception.
+             *  @param data: data to send
+             */
             template <typename Data> void send_data(Data data) {
                 if (this->socket == NULL) {
                     // tcp socket is not connected
@@ -128,6 +191,17 @@ namespace networking {
                     throw BrokenPipe();
                 }
             }
+            /// Receive data of a specific type
+            /**
+             *  This allows to receive data of a specific type Data. If the
+             *  connection is lost, this method will set the link to offline
+             *  and throw a "BrokenPipe" exception. It also will return the
+             *  default value of the given type Data in this case.
+             *  Consider, that this method will block until the data can be
+             *  read from the socket. Use isReady() to check for incomming
+             *  data to allow non-blocking receive.
+             *  @return read value or the default value
+             */
             template <typename Data> Data receive_data() {
                 if (this->socket == NULL) {
                     // tcp socket is not connected
@@ -144,29 +218,47 @@ namespace networking {
                 }
                 return data;
             }
-
+            /// Host data of the link
+            Host* host;
     };
 
     /// A listener class for TCP links
     /**
-     *  This class is listening for new TCP links. You can accept incomming clients
-     *  using accept(). Whether accept is blocking is determined by a bool flag
-     *  that can be accessed using blocking() and blocking(bool).
-     *
-     *  The methods
-     *      open(unsigned short port)
-     *      close()
-     *  are used to start and stopp the listener.
+     *  This class is listening for new TCP links.
      */
     class TcpListener {
         protected:
+            /// server socket used for listening
             TCPsocket socket;
         public:
+            /// Constructor
             TcpListener();
+            /// Destructor
             virtual ~TcpListener();
+            /// Starts listening on a local port
+            /**
+             * This starts the server socket on a given local port.
+             *  @param port: local port number
+             */
             void open(unsigned short port);
+            /// Returns whether the server socket is online or not
+            /**
+             * Returns whether the server socke4t is online or not
+             *  @return true if online
+             */
             bool isOnline();
+            /// Stops listening
+            /**
+             * This stops the server socket on the current local port.
+             */
             void close();
+            /// Accept an incomming connection on TCP
+            /**
+             * This accepts an incomming connection on TCP and returns a
+             *  pointer to the TcpLink. If there is no incomming connection
+             *  it will return NULL.
+             *  @return pointer to TcpLink or NULL
+             */
             TcpLink* accept();
     };
 

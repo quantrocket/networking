@@ -43,7 +43,7 @@ namespace networking {
         }
     }
 
-    void Thread::stop() {
+    void Thread::wait() {
         try {
             this->thread.join();
         } catch (const std::system_error& se) {

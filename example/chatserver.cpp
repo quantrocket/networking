@@ -25,7 +25,7 @@ ChatServer::ChatServer(unsigned short port)
 
 ChatServer::~ChatServer() {
     this->listener.close();
-    this->handler.stop();
+    this->handler.wait();
     std::cout << "Server stopped" << std::endl;
 }
 

@@ -66,8 +66,8 @@ namespace networking {
 
     Worker::~Worker() {
         this->link->close();
-        this->sender.stop();
-        this->receiver.stop();
+        this->sender.wait();
+        this->receiver.wait();
         this->out.clear();
     }
 
@@ -160,6 +160,17 @@ namespace networking {
 
     void Server::accept() {
         while (this->isOnline()) {
+            // check maximum clients
+            if (this->max_clients != -1) {
+                this->workers_mutex.lock();
+                bool full = (this->next_id == this->max_clients);
+                this->workers_mutex.unlock();
+                if (full) {
+                    delay(1000);
+                    continue;
+                }
+            }
+            // try fetch next connection
             TcpLink* next_link = this->listener.accept();
             if (next_link != NULL) {
                 std::string ip = next_link->host->ip();
@@ -196,9 +207,10 @@ namespace networking {
     void Server::shutdown() {
         // shutdown listener
         this->listener.close();
-        this->accepter.stop();
+        this->accepter.wait();
         // disconnect workers
-        for (auto node = this->workers.begin(); node != this->workers.end(); node++) {
+        for (auto node = this->workers.begin();
+             node != this->workers.end(); node++) {
             if (node->second != NULL) {
                 delete node->second;
             }
@@ -336,8 +348,8 @@ namespace networking {
     void Client::disconnect() {
         // close connection
         this->link.close();
-        this->sender.stop();
-        this->receiver.stop();
+        this->sender.wait();
+        this->receiver.wait();
         // clear queues
         this->in.clear();
         this->out.clear();

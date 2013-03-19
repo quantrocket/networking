@@ -26,7 +26,7 @@ ChatClient::ChatClient(const std::string& ip, unsigned short port)
 
 ChatClient::~ChatClient() {
     this->link.close();
-    this->handler.stop();
+    this->handler.wait();
 }
 
 void ChatClient::handle() {
