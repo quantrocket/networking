@@ -4,4 +4,6 @@ chatroom
 src/*~
 example/*~
 obj/*
+obj/Debug/*
+obj/Release/*
 networking.cbp
