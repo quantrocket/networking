@@ -15,13 +15,18 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include <queue>
 
-#include <SDL/SDL.h>
+#include <mutex>
+#include <thread>
+#include <chrono>
 
 namespace networking {
 
+    void delay(unsigned short ms);
+
+    /// Wrapper class for mutex using std::mutex or SDL_mutex
     class Mutex {
         protected:
-            SDL_mutex* mutex;
+            std::mutex mutex;
         public:
             Mutex();
             virtual ~Mutex();
@@ -30,17 +35,19 @@ namespace networking {
     };
 
     class Thread {
-        protected:
-            SDL_Thread* thread;
+        protected:std::thread thread;
         public:
             Thread();
             virtual ~Thread();
-            void run(int (*func)(void*), void* param);
-            int wait();
-            void kill();
+
+            template <typename T>
+            void start(void (*func)(T*), T* param) {
+                this->thread = std::thread(func, param);
+            }
+
+            void stop();
     };
 
-    /*
     /// Thread-Safe Queue
     template <typename Data>
     class ThreadSafeQueue {
@@ -74,7 +81,6 @@ namespace networking {
                 this->mutex.unlock();
             }
     };
-    */
 
 }
 

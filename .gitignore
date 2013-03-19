@@ -1,1 +1,5 @@
 doxygen.config
+chatroom
+*~
+src/*~
+example/*~

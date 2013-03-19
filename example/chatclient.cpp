@@ -12,22 +12,20 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "chatclient.hpp"
 
-int client_handler(void* param) {
-    ChatClient* client = (ChatClient*)param;
+void client_handler(ChatClient* client) {
     client->handle();
-    return 0;
 }
 
 ChatClient::ChatClient(const std::string& ip, unsigned short port)
     : networking::Client() {
     this->authed = false;
     this->connect(ip, port);
-    this->handler.run(client_handler, (void*)this);
+    this->handler.start(client_handler, this);
     std::cout << "Client started" << std::endl;
 }
 
 ChatClient::~ChatClient() {
-    this->handler.wait();
+    this->handler.stop();
     std::cout << "Client stopped" << std::endl;
 }
 

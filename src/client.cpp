@@ -14,17 +14,15 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 namespace networking {
 
-    int client(void* param) {
-        Client* client = (Client*) param;
+    void client(Client* client) {
         client->logic();
-        return 0;
     }
 
     Client::Client() {
     }
 
     Client::~Client() {
-        this->disconnect(true);
+        this->disconnect();
     }
 
     void Client::logic() {
@@ -107,24 +105,20 @@ namespace networking {
         }
         // open connection
         this->link.open(ip, port);
-        this->thread.run(client, (void*)this);
+        this->thread.start(client, this);
     }
 
     bool Client::isOnline() {
         return this->link.isOnline();
     }
 
-    void Client::disconnect(bool immediately) {
+    void Client::disconnect() {
         if (!this->isOnline()) {
             return;
         }
         // close connection
         this->link.close();
-        if (immediately == true) {
-            this->thread.kill();
-        } else {
-            this->thread.wait();
-        }
+        this->thread.stop();
     }
 
     ServerData* Client::pop() {

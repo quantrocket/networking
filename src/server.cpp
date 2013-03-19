@@ -14,10 +14,8 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 namespace networking {
 
-    int server(void* param) {
-        Server* server = (Server*)param;
+    void server(Server* server) {
         server->logic();
-        return 0;
     }
 
     Server::Server(short max_clients)
@@ -26,7 +24,7 @@ namespace networking {
     }
 
     Server::~Server() {
-        this->shutdown(true);
+        this->shutdown();
     }
 
     void Server::logic() {
@@ -152,24 +150,20 @@ namespace networking {
         }    
         // start listener
         this->listener.open(port);
-        this->thread.run(server, (void*)this);
+        this->thread.start(server, this);
     }
 
     bool Server::isOnline() {
         return this->listener.isOnline();
     }
 
-    void Server::shutdown(bool immediately) {
+    void Server::shutdown() {
         if (!this->isOnline()) {
             return;
         }
         // shutdown listener
         this->listener.close();
-        if (immediately == true) {
-            this->thread.kill();
-        } else {
-            this->thread.wait();
-        }
+        this->thread.stop();
         // close and delete worker links
         for (auto node = this->links.begin(); node != this->links.end(); node++) {
             delete node->second;

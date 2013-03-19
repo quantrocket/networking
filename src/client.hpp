@@ -21,7 +21,9 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 namespace networking {
 
-    int client(void* param);
+    class Client;
+
+    void client(Client* client);
 
     class ServerData {
         public:
@@ -30,7 +32,7 @@ namespace networking {
     };
 
     class Client {
-        friend int client(void* param);
+        friend void client(Client* client);
         private:
             TcpLink link;
             Thread thread;
@@ -47,7 +49,7 @@ namespace networking {
             virtual ~Client();
             void connect(const std::string& ip, unsigned short port);
             bool isOnline();
-            void disconnect(bool immediately=false);
+            void disconnect();
             // data management
             ServerData* pop();
             template <typename TEvent> void push(TEvent* event) {

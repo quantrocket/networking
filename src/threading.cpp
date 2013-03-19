@@ -14,51 +14,41 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 namespace networking {
 
+    void delay(unsigned short ms) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+    }
+
     Mutex::Mutex() {
-        this->mutex = SDL_CreateMutex();
     }
 
     Mutex::~Mutex() {
-        SDL_DestroyMutex(this->mutex);
     }
 
     void Mutex::lock() {
-        SDL_LockMutex(this->mutex);
+        this->mutex.lock();
     }
 
     void Mutex::unlock() {
-        SDL_UnlockMutex(this->mutex);
+        this->mutex.unlock();
     }
 
     // ------------------------------------------------------------------------
 
-    Thread::Thread()
-        : thread(NULL) {
+    Thread::Thread() {
     }
 
     Thread::~Thread() {
-        if (this->thread != NULL) {
-            this->kill();
+        if (this->thread.joinable()) {
+            this->thread.join();
         }
     }
 
-    void Thread::run(int (*func)(void*), void* param) {
-        if (this->thread != NULL) {
-            this->kill();
+    void Thread::stop() {
+        try {
+            this->thread.join();
+        } catch (const std::system_error& se) {
+            // ...
         }
-        this->thread = SDL_CreateThread(func, param);
-    }
-
-    int Thread::wait() {
-        int status = 0;
-        SDL_WaitThread(this->thread, &status);
-        this->thread = NULL;
-        return status;
-    }
-
-    void Thread::kill() {
-        SDL_KillThread(this->thread);
-        this->thread = NULL;
     }
 
 }

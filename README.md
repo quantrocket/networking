@@ -28,9 +28,9 @@ You can find a server-client-based chatroom example in the directory `example/`.
 # Building
 ===
 
-Building the module is easy; just remember to link SDL and SDL_net. Because I used some C++11-features you currently need a compiler supporting C++11 (e.g. `--std=c++0x` for gcc). This will may be changed in the future depending on the mature purpose of this framework. You can build the example just by
+Building the module is easy; just remember to link SDL and SDL_net. Also you need to mention C++11 to your compiler as well as pthreads. You can build the example just by
 
-    g++ -o chatroom src/*.cpp example/*.cpp -lSDL -lSDL_net --std=c++0x
+    g++ -o chatroom src/*.cpp example/*.cpp -lSDL -lSDL_net --std=c++0x -pthread
 
 I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
@@ -41,4 +41,9 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 - documentation
 - easier event customization (e.g. generate are customized `events.hpp` from a XML-file using a Python-script)
 - single- and multithreading server support (`enum Threading { SINGLE_THREADING, MULTITHREADING };`)
+
+- Endianness?
+- Fix-sized types for events? (32-bit / 64-bit; http://en.cppreference.com/w/cpp/types/integer)
+- Serialization?
+
 

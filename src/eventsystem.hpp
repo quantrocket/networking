@@ -75,10 +75,8 @@ namespace networking {
             static Event* assemble(void* buffer);
     };
 
-    /*
-    /// Simple Event Queue
+    /// Thread-Safe Event Queue
     class EventQueue: public ThreadSafeQueue<Event> {};
-    */
 
 }
 

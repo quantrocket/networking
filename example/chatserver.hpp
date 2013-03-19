@@ -18,10 +18,12 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "common.hpp"
 
-int server_handler(void* param);
+class ChatServer;
+
+void server_handler(ChatServer* server);
 
 class ChatServer: public networking::Server {
-    friend int server_handler(void* param);
+    friend void server_handler(ChatServer* server);
     protected:
         networking::Thread handler;
         

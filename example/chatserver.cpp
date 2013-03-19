@@ -12,21 +12,19 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include "chatserver.hpp"
 
-int server_handler(void* param) {
-    ChatServer* server = (ChatServer*)param;
+void server_handler(ChatServer* server) {
     server->handle();
-    return 0;
 }
 
 ChatServer::ChatServer(unsigned short port)
     : networking::Server() {
     this->start(port);
-    this->handler.run(server_handler, (void*)this);
+    this->handler.start(server_handler, this);
     std::cout << "Server started" << std::endl;
 }
 
 ChatServer::~ChatServer() {
-    this->handler.wait();
+    this->handler.stop();
     std::cout << "Server stopped" << std::endl;
 }
 

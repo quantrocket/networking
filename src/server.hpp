@@ -35,37 +35,14 @@ namespace networking {
             Event* event;
             std::size_t size;
     };
-
-    int server(void* param);
+    
+    class Server;
+    
+    void server(Server* server);
 
     /// Server
-    /**
-     *  The class provides primitive non-threaded Server-Client communication.
-     *  Each client is handled by a worker using an id, the tcp link and the
-     *  networking queue.
-     *
-     *  To trigger accepting new clients you can use
-     *      virtual void logic()
-     *  To trigger a worker's logic you can use
-     *      virtual void logic(Worker* worker)
-     *
-     *  Remember to add mutex/locking then using threads. The call of connect()
-     *  and disconnect() should be thread-safe referring to the call of a worker's
-     *  logic.
-     *
-     *  If you want to iterate through all workers to call their' logics using a
-     *  thread, you should iterate through a copy of the workers-map, because
-     *  disconnect() will remove the worker from the map. So you will crash using
-     *  an iterator on the original map because your current worker-node
-     *  will be invalid after disconnect()'ing him. You will not be able to iterate
-     *  to the next worker properly. A copy of the map would avoid this, because
-     *  you will iterate through a previously made copy. So the original map can be
-     *  manipulated without effecting your current iteration.
-     *  This might also be relevant for seperat accepting-clients-threads and the
-     *  call of connect(), which will create a worker and append him to the map.
-     */
     class Server {
-        friend int server(void* param);
+        friend void server(Server* server);
         protected:
             TcpListener listener;
             Thread thread;
@@ -90,7 +67,7 @@ namespace networking {
             virtual ~Server();
             void start(unsigned short port);
             bool isOnline();
-            void shutdown(bool immediately=false);
+            void shutdown();
             // worker management
             void disconnect(ClientID id);
             // ip management
