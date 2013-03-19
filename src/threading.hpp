@@ -14,7 +14,6 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #define THREADING_HPP
 
 #include <queue>
-
 #include <mutex>
 #include <thread>
 #include <chrono>

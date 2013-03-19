@@ -14,6 +14,7 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #define COMMON_HPP
 
 #include <iostream>
+#include <cstdint>
 #include <string.h>
 
 #include "../src/eventsystem.hpp"

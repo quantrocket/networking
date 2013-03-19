@@ -13,12 +13,13 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #ifndef EVENTSYSTEM_HPP
 #define EVENTSYSTEM_HPP
 
+#include <cstdint>
+
 #include "threading.hpp"
-#include "connection.hpp"
 
 namespace networking {
 
-    typedef unsigned short EventID;
+    typedef uint16_t EventID;
 
     /// ID for unspecified event type
     const EventID E_GENERIC = 0;
@@ -77,6 +78,22 @@ namespace networking {
 
     /// Thread-Safe Event Queue
     class EventQueue: public ThreadSafeQueue<Event> {};
+
+    /// Event-Pipe with incomming and outgoing queue
+    class EventPipe {
+        protected:
+            /// Pushed events
+            EventQueue* in;
+            /// Events for popping
+            EventQueue* out;
+        public:
+            EventPipe(EventQueue* in, EventQueue* out);
+            virtual ~EventPipe();
+            Event* pop();
+            template <typename TEvent> void push(TEvent* event) {
+                this->in->push(event);
+            } 
+    };
 
 }
 

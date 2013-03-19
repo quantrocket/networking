@@ -16,6 +16,7 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #include <queue>
 #include <set>
 #include <map>
+#include <cstdint>
 
 #include "threading.hpp"
 #include "connection.hpp"
@@ -23,7 +24,7 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 namespace networking {
 
-    typedef unsigned short ClientID;
+    typedef uint16_t ClientID;
 
     /// ClientData
     /** Contains a ClientID (as source or destination), an Event and the
