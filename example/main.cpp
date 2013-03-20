@@ -12,7 +12,7 @@ http://creativecommons.org/licenses/by-nc/3.0/
 
 #include <iostream>
 
-#include "common.hpp"
+#include "events.hpp"
 #include "chatclient.hpp"
 #include "chatserver.hpp"
 

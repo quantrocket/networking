@@ -15,6 +15,8 @@ Events mustn't contain pointers or other high-level data which are based on poin
 Each event needs to implement at least the default-constructor and a copy-constructor-like constructor who gets a pointer to void. Remember to set the event_id to the right value. The void-pointer-constructor is used to assemble your events from a void-pointer, as used by `Event* Event::assemble(void* buffer)`.
 To customize receiving events you need to implement the static Event-method `Event* assemble(void* buffer)`. It is called by the NetworkingQueue each time the system tries to receive an event using a TCP-Link.
 
+There is a `generate.py` and an `example.cfg` to easily create customized events. At the moment the python-code is ugly and might be not easy to read. This will be improved in future.
+
 # TCP-only
 ===
 
@@ -38,10 +40,6 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 ===
 
 - detailed testing (e.g. for memory leaks)
-- easier event customization (e.g. generate are customized `events.hpp` from a XML-file using a Python-script)
-
-- boost::asio instead SDL_net ?
-- Endianness?
-- Serialization?
-
+- check for possible endianness problems
+- improved code structure of `generate.py`
 

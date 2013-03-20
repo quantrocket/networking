@@ -16,7 +16,10 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #include <iostream>
 #include <map>
 
-#include "common.hpp"
+#include "events.hpp"
+
+#include "../src/connection.hpp"
+#include "../src/serverclient.hpp"
 
 class ChatClient;
 

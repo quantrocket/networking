@@ -16,7 +16,10 @@ http://creativecommons.org/licenses/by-nc/3.0/
 #include <iostream>
 #include <map>
 
-#include "common.hpp"
+#include "events.hpp"
+
+#include "../src/connection.hpp"
+#include "../src/serverclient.hpp"
 
 class ChatServer;
 
@@ -26,7 +29,7 @@ class ChatServer: public networking::Server {
     friend void server_handler(ChatServer* server);
     protected:
         networking::Thread handler;
-        
+
         std::map<ClientID, std::string> users;
 
         void handle();
