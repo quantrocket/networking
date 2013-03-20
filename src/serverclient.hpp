@@ -292,7 +292,7 @@ namespace networking {
                     if (node->second != NULL && node->second->isOnline()) {
                         Worker* worker = node->second;
                         // create bundle with copy of event
-                        Bundle* bundle = new Bundle(worker->id, new TEvent(event), sizeof(TEvent));
+                        Bundle* bundle = new Bundle(worker->id, new TEvent(*event), sizeof(TEvent));
                         // push to each worker
                         worker->out.push(bundle);
                     }

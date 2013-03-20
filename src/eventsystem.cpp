@@ -22,17 +22,13 @@ namespace networking {
         : event_id(event_id) {
     }
 
-    Event::Event(Event* other)
-        : event_id(other->event_id) {
-    }
-    
     // ------------------------------------------------------------------------
-    
+
     EventPipe::EventPipe(EventQueue* in, EventQueue* out)
         : in(in)
         , out(out) {
     }
-    
+
     EventPipe::~EventPipe() {
     }
 

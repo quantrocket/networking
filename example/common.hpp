@@ -39,10 +39,6 @@ struct LoginRequest: public Event {
     LoginRequest(const std::string& username) : Event(E_LOGIN_REQUEST) {
         strncpy(this->username, username.c_str(), 255);
     }
-
-    LoginRequest(LoginRequest* other) : Event(E_LOGIN_REQUEST) {
-        strncpy(this->username, other->username, 255);
-    }
 };
 
 struct LoginResponse: public Event {
@@ -56,12 +52,6 @@ struct LoginResponse: public Event {
         this->id = id;
         strncpy(this->username, username.c_str(), 255);
     }
-
-    LoginResponse(LoginResponse* other) : Event(E_LOGIN_RESPONSE) {
-        this->success = other->success;
-        this->id      = other->id;
-        strncpy(this->username, other->username, 255);
-    }
 };
 
 struct MessageRequest: public Event {
@@ -69,10 +59,6 @@ struct MessageRequest: public Event {
 
     MessageRequest(const std::string& text) : Event(E_MESSAGE_REQUEST) {
         strncpy(this->text, text.c_str(), 20000);
-    }
-
-    MessageRequest(MessageRequest* other) : Event(E_MESSAGE_REQUEST) {
-        strncpy(this->text, other->text, 20000);
     }
 };
 
@@ -85,18 +71,10 @@ struct MessageResponse: public Event {
         strncpy(this->text, text.c_str(), 20000);
         this->id = id;
     }
-
-    MessageResponse(MessageResponse* other) : Event(E_MESSAGE_RESPONSE) {
-        strncpy(this->text, other->text, 20000);
-        this->id = other->id;
-    }
 };
 
 struct LogoutRequest: public Event {
     LogoutRequest() : Event(E_LOGOUT_REQUEST) {
-    }
-
-    LogoutRequest(LogoutRequest* other) : Event(E_LOGOUT_REQUEST) {
     }
 };
 
@@ -105,9 +83,6 @@ struct LogoutResponse: public Event {
 
     LogoutResponse(ClientID id) : Event(E_LOGOUT_RESPONSE) {
         this->id = id;
-    }
-    LogoutResponse(LogoutResponse* other) : Event(E_LOGOUT_RESPONSE) {
-        this->id = other->id;
     }
 };
 
@@ -121,12 +96,6 @@ struct UserlistUpdate: public Event {
         this->add = add;
         this->id  = id;
         strncpy(this->username, username.c_str(), 255);
-    }
-
-    UserlistUpdate(UserlistUpdate* other) : Event(E_USERLIST_UPDATE) {
-        this->add = other->add;
-        this->id  = other->id;
-        strncpy(this->username, other->username, 255);
     }
 };
 
