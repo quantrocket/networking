@@ -220,9 +220,9 @@ http://creativecommons.org/licenses/by-nc/3.0/
 */
 
 """
-guard_open = """#ifndef {0}_res
-#define {0}_res
-""".format(res[:-4].upper())
+guard_open = """#ifndef {0}_HPP_GUARD
+#define {0}_HPP_GUARD
+""".format(upper(res))
 
 guard_close = """
 #endif

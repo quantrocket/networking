@@ -55,25 +55,25 @@ UserlistUpdate::UserlistUpdate(bool add, ClientID id, const std::string& usernam
 Event* Event::assemble(void* buffer) {
     Event* event = reinterpret_cast<Event*>(buffer);
     EventID id = event->event_id;
-    switch (id) { 
+    switch (id) {
         case E_LOGIN_REQUEST:
             event = new LoginRequest(*(LoginRequest*)buffer);
-            break; 
+            break;
         case E_LOGIN_RESPONSE:
             event = new LoginResponse(*(LoginResponse*)buffer);
-            break; 
+            break;
         case E_MESSAGE_REQUEST:
             event = new MessageRequest(*(MessageRequest*)buffer);
-            break; 
+            break;
         case E_MESSAGE_RESPONSE:
             event = new MessageResponse(*(MessageResponse*)buffer);
-            break; 
+            break;
         case E_LOGOUT_REQUEST:
             event = new LogoutRequest(*(LogoutRequest*)buffer);
-            break; 
+            break;
         case E_LOGOUT_RESPONSE:
             event = new LogoutResponse(*(LogoutResponse*)buffer);
-            break; 
+            break;
         case E_USERLIST_UPDATE:
             event = new UserlistUpdate(*(UserlistUpdate*)buffer);
             break;

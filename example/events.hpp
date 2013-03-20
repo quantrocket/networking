@@ -10,8 +10,8 @@ The source code is released under CC BY-NC 3.0
 http://creativecommons.org/licenses/by-nc/3.0/
 */
 
-#ifndef EV_res
-#define EV_res
+#ifndef EVENTS_HPP_GUARD
+#define EVENTS_HPP_GUARD
 
 #include "../src/eventsystem.hpp"
 #include "../src/serverclient.hpp"
