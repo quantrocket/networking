@@ -17,7 +17,7 @@ To customize receiving events you need to implement the static Event-method `Eve
 
 There is a `generate.py` and an `example.cfg` to easily create customized events. At the moment the python-code is ugly and might be not easy to read. This will be improved in future.
 
-# Futhur limitations
+# Furthur limitations
 ===
 
 Currently there is no UDP support. The server-client code is completly based on TCP only. I'm not shure whether I already need UDP, so it will stay disabled for a non-specified while. Also multiple endianness is not supported. Consider this when shipping your application using the framework to different plattforms.
