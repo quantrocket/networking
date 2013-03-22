@@ -15,23 +15,19 @@ http://creativecommons.org/licenses/by-nc/3.0/
 namespace networking {
 
     void server_accept(Server* server) {
-        server->accept();
+        server->accept_loop();
     }
 
-    void worker_send(Worker* worker) {
-        worker->send();
+    void server_send(Server* worker) {
+        worker->send_loop();
     }
 
-    void worker_recv(Worker* worker) {
-        worker->recv();
+    void server_recv(Server* server) {
+        server->recv_loop();
     }
 
-    void client_send(Client* client) {
-        client->send();
-    }
-
-    void client_recv(Client* client) {
-        client->recv();
+    void client_handle(Client* client) {
+        client->handle_loop();
     }
 
     // ------------------------------------------------------------------------
@@ -56,8 +52,6 @@ namespace networking {
         this->id     = server->next_id++;
         this->server = server;
         this->link   = link;
-        this->sender.start(worker_send, this);
-        this->receiver.start(worker_recv, this);
         server->workers[this->id] = this;
         server->workers_mutex.unlock();
         // send client id to client
@@ -66,81 +60,10 @@ namespace networking {
 
     Worker::~Worker() {
         this->link->close();
-        this->sender.wait();
-        this->receiver.wait();
-        this->out.clear();
     }
 
     void Worker::disconnect() {
         this->server->disconnect(this->id);
-    }
-
-    void Worker::send() {
-        while (this->isOnline()) {
-            // pop next bundle
-            Bundle* bundle = this->out.pop();
-            if (bundle != NULL) {
-                if (bundle->id == this->id) {
-                    // send
-                    try {
-                        link->send_data<std::size_t>(bundle->size);
-                        link->send_ptr(bundle->event, bundle->size);
-                    } catch (const BrokenPipe& bp) {
-                        link->close();
-                        return;
-                    }
-                } else {
-                    std::cerr << "data for #" << bundle->id
-                              << " cannot be sent by this worker"
-                              << std::endl;
-                }
-                delete bundle;
-            }
-            delay(25);
-        }
-    }
-
-    void Worker::recv() {
-        while (this->isOnline()) {
-            if (this->link->isReady()) {
-                // load size
-                std::size_t size;
-                try {
-                    size = this->link->receive_data<std::size_t>();
-                } catch (const BrokenPipe& bp) {
-                    this->link->close();
-                    return;
-                }
-                if (size > 0) {
-                    // wait for event (break if link went offline)
-                    while (!this->link->isReady()) {
-                        delay(10);
-                        if (!this->isOnline()) {
-                            return;
-                        }
-                    }
-                    // load event
-                    void* buffer;
-                    try {
-                        buffer = link->receive_ptr(size);
-                    } catch (const BrokenPipe& bp) {
-                        this->link->close();
-                        return;
-                    }
-                    // assemble event
-                    Event* event = Event::assemble(buffer);
-                    free(buffer);
-                    if (event != NULL) {
-                        // create bundle
-                        Bundle* bundle = new Bundle(this->id, event, size);
-                        // push bundle to server
-                        this->server->in.push(bundle);
-                    }
-                }
-            } else {
-                delay(25);
-            }
-        }
     }
 
     bool Worker::isOnline() {
@@ -158,7 +81,7 @@ namespace networking {
         this->shutdown();
     }
 
-    void Server::accept() {
+    void Server::accept_loop() {
         while (this->isOnline()) {
             // check maximum clients
             if (this->max_clients != -1) {
@@ -191,6 +114,114 @@ namespace networking {
         }
     }
 
+    void Server::send_loop() {
+        while (this->isOnline()) {
+            // Wait for Next Bundle
+            Bundle* bundle = this->out.pop();
+            while (bundle == NULL) {
+                delay(25);
+                if (!this->isOnline()) {
+                    // Quit Loop if Offline
+                    return;
+                }
+                bundle = this->out.pop();
+            }
+            // Get Worker's Link
+            this->workers_mutex.lock();
+            auto node = this->workers.find(bundle->id);
+            bool found = (node != this->workers.end());
+            this->workers_mutex.unlock();
+            if (found) {
+                TcpLink* link = node->second->link;
+                if (link->isOnline()) {
+                    // Actual Sending
+                    try {
+                        link->send_data<std::size_t>(bundle->size);
+                        link->send_ptr(bundle->event, bundle->size);
+                    } catch (const BrokenPipe& bp) {
+                        std::cerr << "Connection to Worker #"
+                                  << node->first << " was lost"
+                                  << std::endl;
+                        link->close();
+                    }
+                }
+            } else {
+                std::cerr << "Worker #" << bundle->id << " not found"
+                          << std::endl;
+            }
+            delete bundle;
+        }
+    }
+
+    void Server::recv_loop() {
+        while (this->isOnline()) {
+            // Copy Set of Workers
+            this->workers_mutex.lock();
+            auto workers = this->workers;
+            this->workers_mutex.unlock();
+            // Iterate Through Workers
+            for (auto node = workers.begin(); node != workers.end(); node++) {
+                TcpLink* link = node->second->link;
+                if (link->isOnline()) {
+                    while (link->isReady()) {
+                        // Load Event Size
+                        std::size_t size;
+                        try {
+                            size = link->receive_data<std::size_t>();
+                        } catch (const BrokenPipe& bp) {
+                            link->close();
+                            std::cerr << "Connection to Worker #"
+                                      << node->first << " was lost"
+                                      << std::endl;
+                            continue;
+                        }
+                        if (size == 0) {
+                            std::cerr << "Worker #" << node->first
+                                      << " received an empty event"
+                                      << std::endl;
+                            continue;
+                        }
+                        // Wait for Event Data
+                        while (!link->isReady()) {
+                            delay(10);
+                            if (!link->isOnline()) {
+                                // Continue if Worker Offline
+                                std::cerr << "Worker #" << node->first
+                                          << " is offline" << std::endl;
+                                continue;
+                            }
+                        }
+                        // Load Buffer
+                        void* buffer;
+                        try {
+                            buffer = link->receive_ptr(size);
+                        } catch (const BrokenPipe& bp) {
+                            std::cerr << "Connection to Worker #"
+                                      << node->first << " was lost"
+                                      << std::endl;
+                            link->close();
+                            continue;
+                        }
+                        // Assemble Event Data
+                        Event* event = Event::assemble(buffer);
+                        free(buffer);
+                        if (event != NULL) {
+                            // Create Bundle and Push to Queue
+                            Bundle* bundle = new Bundle(node->first,
+                                event, size);
+                            this->in.push(bundle);
+                        } else {
+                            std::cerr << "Worker #" << node->first
+                                      << " received an empty event"
+                                      << std::endl;
+                        }
+                    }
+                }
+            }
+            delay(25);
+        }
+    }
+
     void Server::start(unsigned short port) {
         if (this->isOnline()) {
             return;
@@ -198,6 +229,8 @@ namespace networking {
         // start listener
         this->listener.open(port);
         this->accepter.start(server_accept, this);
+        this->sender.start(server_send, this);
+        this->receiver.start(server_recv, this);
     }
 
     bool Server::isOnline() {
@@ -208,6 +241,8 @@ namespace networking {
         // shutdown listener
         this->listener.close();
         this->accepter.wait();
+        this->sender.wait();
+        this->receiver.wait();
         // disconnect workers
         for (auto node = this->workers.begin();
              node != this->workers.end(); node++) {
@@ -218,6 +253,7 @@ namespace networking {
         this->workers.clear();
         this->next_id = 0;
         // clear queue
+        this->out.clear();
         this->in.clear();
     }
 
@@ -260,71 +296,72 @@ namespace networking {
         this->disconnect();
     }
 
-    void Client::send() {
+    void Client::handle_loop() {
         while (this->isOnline()) {
-            // pop next bundle
-            Bundle* bundle = this->out.pop();
-            if (bundle != NULL) {
-                if (bundle->id == this->id) {
-                    // send
-                    try {
-                        link.send_data<std::size_t>(bundle->size);
-                        link.send_ptr(bundle->event, bundle->size);
-                    } catch (const BrokenPipe& bp) {
-                        link.close();
-                        return;
-                    }
-                } else {
-                    std::cerr << "data from #" << bundle->id
-                              << " cannot be sent by this client"
-                              << std::endl;
+            // Send All Bundles
+            while (true) {
+                Bundle* bundle = this->out.pop();
+                if (bundle == NULL) {
+                    // Nothing Left
+                    break;
                 }
+                // Send to Server
+                try {
+                    this->link.send_data<std::size_t>(bundle->size);
+                    this->link.send_ptr(bundle->event, bundle->size);
+                } catch (const BrokenPipe& bp) {
+                    std::cerr << "Connection to server was lost" << std::endl;
+                    this->link.close();
+                    return;
+                }
+                // Delete Bundle
                 delete bundle;
             }
-            delay(25);
-        }
-    }
-
-    void Client::recv() {
-        while (this->isOnline()) {
-            if (this->link.isReady()) {
-                // load size
+            // Receive All Bundles
+            while (this->link.isReady()) {
+                // Load Size
                 std::size_t size;
                 try {
                     size = this->link.receive_data<std::size_t>();
                 } catch (const BrokenPipe& bp) {
+                    std::cerr << "Connection to server was lost" << std::endl;
                     this->link.close();
                     return;
                 }
-                if (size > 0) {
-                    // wait for event (break if link went offline)
-                    while (!this->link.isReady()) {
-                        delay(10);
-                        if (!this->isOnline()) {
-                            return;
-                        }
-                    }
-                    // load event
-                    void* buffer;
-                    try {
-                        buffer = link.receive_ptr(size);
-                    } catch (const BrokenPipe& bp){
-                        this->link.close();
+                if (size == 0) {
+                    std::cerr << "Client received an empty event" << std::endl;
+                    continue;
+                }
+                // Wait for Event Data
+                while (!this->link.isReady()) {
+                    delay(10);
+                    if (!this->isOnline()) {
+                        std::cerr << "Connection to server was lost"
+                                  << std::endl;
                         return;
                     }
-                    // assemble event
-                    Event* event = Event::assemble(buffer);
-                    free(buffer);
-                    if (event != NULL) {
-                        // create bundle
-                        Bundle* bundle = new Bundle(this->id, event, size);
-                        // push bundle to queue
-                        this->in.push(bundle);
-                    }
                 }
-            } else {
-                delay(25);
+                // Load Buffer
+                void* buffer;
+                try {
+                    buffer = this->link.receive_ptr(size);
+                } catch (const BrokenPipe& bp) {
+                    std::cerr << "Connection to server was lost" << std::endl;
+                    this->link.close();
+                    return;
+                }
+                // Assemble Event Data
+                Event* event = Event::assemble(buffer);
+                free(buffer);
+                if (event != NULL) {
+                    // Create Bundle and Push to Queue
+                    Bundle* bundle = new Bundle(this->id, event, size);
+                    this->in.push(bundle);
+                } else {
+                    std::cerr << "Client received an empty event" << std::endl;
+                }
             }
+            delay(25);
         }
     }
 
@@ -337,8 +374,7 @@ namespace networking {
         // receive client id
         this->id = this->link.receive_data<ClientID>();
         // start threads
-        this->sender.start(client_send, this);
-        this->receiver.start(client_recv, this);
+        this->handler.start(client_handle, this);
     }
 
     bool Client::isOnline() {
@@ -348,8 +384,7 @@ namespace networking {
     void Client::disconnect() {
         // close connection
         this->link.close();
-        this->sender.wait();
-        this->receiver.wait();
+        this->handler.wait();
         // clear queues
         this->in.clear();
         this->out.clear();

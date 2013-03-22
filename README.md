@@ -17,10 +17,10 @@ To customize receiving events you need to implement the static Event-method `Eve
 
 There is a `generate.py` and an `example.cfg` to easily create customized events. At the moment the python-code is ugly and might be not easy to read. This will be improved in future.
 
-# TCP-only
+# Futhur limitations
 ===
 
-Currently there is no UDP support. The server-client code is completly based on TCP only. I'm not shure whether I already need UDP, so it will stay disabled for a non-specified while.
+Currently there is no UDP support. The server-client code is completly based on TCP only. I'm not shure whether I already need UDP, so it will stay disabled for a non-specified while. Also multiple endianness is not supported. Consider this when shipping your application using the framework to different plattforms.
 
 # Example
 ===
@@ -39,7 +39,6 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 # Scheduled Changes
 ===
 
-- detailed testing (e.g. for memory leaks)
-- check for possible endianness problems
+- event more detailed testing (e.g. for memory leaks)
 - improved code structure of `generate.py`
 

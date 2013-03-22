@@ -40,38 +40,30 @@ namespace networking {
      *  @param server: pointer to the server
      */
     void server_accept(Server* server);
-    /// Helper function for starting worker's sending-loop
+    /// Helper function for starting wthe server's sending-loop
     /**
-     * This function will be started as a thread. It calls the worker's
+     * This function will be started as a thread. It calls the server's
      *  sending-loop to enable sending data in a seperate thread.
-     *  This thread is started and stopped by the worker class.
-     *  @param worker: pointer to the worker
+     *  This thread is started and stopped by the server class.
+     *  @param server: pointer to the server
      */
-    void worker_send(Worker* worker);
-    /// Helper function for starting worker's receiving-loop
+    void server_send(Server* server);
+    /// Helper function for starting server's receiving-loop
     /**
-     * This function will be started as a thread. It calls the worker's
+     * This function will be started as a thread. It calls the server's
      *  receiving-loop to enable receiving data in a seperate thread.
-     *  This thread is started and stopped by the worker class.
-     *  @param worker: pointer to the worker
+     *  This thread is started and stopped by the server class.
+     *  @param server: pointer to the server
      */
-    void worker_recv(Worker* worker);
-    /// Helper function for starting client's sending-loop
+    void server_recv(Server* server);
+    /// Helper function for starting client's receiving-sending-loop
     /**
      * This function will be started as a thread. It calls the client's
-     *  sending-loop to enable sending data in a seperate thread.
+     *  receiving-sending-loop to enable sending data in a seperate thread.
      *  This thread is started and stopped by the client class.
      *  @param client: pointer to the client
      */
-    void client_send(Client* client);
-    /// Helper function for starting client's receiving-loop
-    /**
-     * This function will be started as a thread. It calls the client's
-     *  receiving-loop to enable receiving data in a seperate thread.
-     *  This thread is started and stopped by the client class.
-     *  @param client: pointer to the client
-     */
-    void client_recv(Client* client);
+    void client_handle(Client* client);
 
     /// Bundle of client ID, event pointer and event size
     /**
@@ -105,15 +97,11 @@ namespace networking {
     /// Worker
     /**
      * This is used in the context of the server class. Each client is handled
-     *  by a worker. This worker contains the client ID, the TCP link, the
-     *  pointer to the related server and an queue for outgoing bundles for
-     *  sending. It uses single threads for sending and receiving. All received
-     *  bundles are pushed to the server's incomming queue.
+     *  by a worker. This worker contains the client ID, the TCP link and the
+     *  pointer to the related server.
      */
     class Worker {
         friend class Server;
-        friend void worker_send(Worker* worker);
-        friend void worker_recv(Worker* worker);
         protected:
             /// client ID
             ClientID id;
@@ -121,18 +109,8 @@ namespace networking {
             Server* server;
             /// TCP link to the client
             TcpLink* link;
-            /// outgoing bundles queue
-            ThreadSafeQueue<Bundle> out;
-            /// thread for sending-loop
-            Thread sender;
-            /// thread for receiving-loop
-            Thread receiver;
             /// Disconnects the worker
             void disconnect();
-            /// Sending-loop
-            void send();
-            /// non-blocking Receiving-loop
-            void recv();
         public:
             /// Constructor
             /**
@@ -161,16 +139,23 @@ namespace networking {
      *  until a given, fixed maximum or more, if a maximum of -1 is given.
      *  Also it provides banning and unbanning IPs to refuse clients. The
      *  server contains an incomming queue with received bundles for all
-     *  workers.
+     *  workers and an outgoing queue with bundles ready for sending to a
+     *  worker.
      */
     class Server {
         friend class Worker;
         friend void server_accept(Server* server);
+        friend void server_send(Server* server);
+        friend void server_recv(Server* server);
         protected:
             /// Listener for accepting clients
             TcpListener listener;
             /// Thread for accepting-loop
             Thread accepter;
+            /// Thread for sending-loop
+            Thread sender;
+            /// Thread for receiving-loop
+            Thread receiver;
             /// Maximum number of clients (-1 = infinite)
             short max_clients;
             /// Next worker's ID
@@ -185,8 +170,14 @@ namespace networking {
             Mutex ips_mutex;
             /// Queue of incomming bundles
             ThreadSafeQueue<Bundle> in;
+            /// Queue of outgoing bundles
+            ThreadSafeQueue<Bundle> out;
             /// Accepter-loop
-            void accept();
+            void accept_loop();
+            /// Sending-loop
+            void send_loop();
+            /// Receiving-loop
+            void recv_loop();
         public:
             /// Constructor
             /**
@@ -260,6 +251,8 @@ namespace networking {
              *  @param id: destination's client ID
              */
             template <typename TEvent> void push(TEvent* event, ClientID id) {
+                this->out.push(new Bundle(id, event, sizeof(TEvent)));
+                /*
                 this->workers_mutex.lock();
                 // Search Worker
                 auto node = this->workers.find(id);
@@ -269,11 +262,11 @@ namespace networking {
                     // create bundle
                     Bundle* bundle = new Bundle(id, event, sizeof(TEvent));
                     // push to his queue
-                    worker->out.push(bundle);
+                    this->out.push(bundle);
                 } else {
                     this->workers_mutex.unlock();
                     std::cerr << "No worker #" << id << " found" << std::endl;
-                }
+                }*/
             }
             /**
              * This will create new bundles using the event-pointer and the
@@ -287,6 +280,15 @@ namespace networking {
              */
             template <typename TEvent> void push(TEvent* event) {
                 this->workers_mutex.lock();
+                auto workers = this->workers;
+                this->workers_mutex.unlock();
+                for (auto node = workers.begin(); node != workers.end(); node++) {
+                    if (node->second != NULL && node->second->isOnline()) {
+                        this->out.push(new Bundle(node->first,
+                            new TEvent(*event), sizeof(TEvent)));
+                    }
+                }
+                /*
                 auto node = this->workers.begin();
                 while (node != this->workers.end()) {
                     if (node->second != NULL && node->second->isOnline()) {
@@ -294,13 +296,14 @@ namespace networking {
                         // create bundle with copy of event
                         Bundle* bundle = new Bundle(worker->id, new TEvent(*event), sizeof(TEvent));
                         // push to each worker
-                        worker->out.push(bundle);
+                        this->out.push(bundle);
                     }
                     node++;
                 }
                 // event was copied, so can be deleted
                 delete event;
                 this->workers_mutex.unlock();
+                */
             }
     };
 
@@ -313,21 +316,17 @@ namespace networking {
      *  basic work.
      */
     class Client {
-        friend void client_send(Client* client);
-        friend void client_recv(Client* client);
+        friend void client_handle(Client* client);
         private:
-            /// Thread for sending-loop
-            Thread sender;
-            /// Thread for receiving-loop
+            /// Thread for sending-receiving-loop
+            Thread handler;
             Thread receiver;
             /// Queue for outgoing bundles
             ThreadSafeQueue<Bundle> out;
             /// Queue for incomming bundles
             ThreadSafeQueue<Bundle> in;
-            /// Sending-loop
-            void send();
-            /// Receiving-loop
-            void recv();
+            /// Sending-Receiving-loop
+            void handle_loop();
         protected:
             /// Tcp-Link to the server
             TcpLink link;
