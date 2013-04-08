@@ -1,13 +1,11 @@
 # depslib dependency file v1.0
-1363772575 source:/home/christian/Dropbox/Projekte/networking/example/chatclient.cpp
+1365431153 source:/home/christian/Dropbox/Projekte/networking/example/chatclient.cpp
 	"chatclient.hpp"
 
-1363772263 /home/christian/Dropbox/Projekte/networking/example/chatclient.hpp
+1365429199 /home/christian/Dropbox/Projekte/networking/example/chatclient.hpp
 	<iostream>
 	<map>
-	"events.hpp"
-	"../src/connection.hpp"
-	"../src/serverclient.hpp"
+	"../src/clientserver.hpp"
 
 1363772268 /home/christian/Dropbox/Projekte/networking/example/common.hpp
 	"../src/eventsystem.hpp"
@@ -40,22 +38,19 @@
 	"connection.hpp"
 	"eventsystem.hpp"
 
-1363772572 source:/home/christian/Dropbox/Projekte/networking/example/chatserver.cpp
+1365429440 source:/home/christian/Dropbox/Projekte/networking/example/chatserver.cpp
 	"chatserver.hpp"
 
-1363772255 /home/christian/Dropbox/Projekte/networking/example/chatserver.hpp
+1365429436 /home/christian/Dropbox/Projekte/networking/example/chatserver.hpp
 	<iostream>
 	<map>
-	"events.hpp"
-	"../src/connection.hpp"
-	"../src/serverclient.hpp"
+	"../src/clientserver.hpp"
 
 1363768067 source:/home/christian/Dropbox/Projekte/networking/example/common.cpp
 	"common.hpp"
 
-1363772961 source:/home/christian/Dropbox/Projekte/networking/example/main.cpp
+1365429442 source:/home/christian/Dropbox/Projekte/networking/example/main.cpp
 	<iostream>
-	"events.hpp"
 	"chatclient.hpp"
 	"chatserver.hpp"
 
@@ -80,4 +75,39 @@
 
 1363774285 source:/home/christian/Dropbox/Projekte/networking/example/events.cpp
 	"events.hpp"
+
+1365428605 /home/christian/Dropbox/Projekte/networking/src/clientserver.hpp
+	<set>
+	<map>
+	<cstdint>
+	"tcp.hpp"
+	"json.hpp"
+	"utils.hpp"
+
+1365430279 /home/christian/Dropbox/Projekte/networking/src/tcp.hpp
+	<iostream>
+	<stdlib.h>
+	<cstdint>
+	<SDL/SDL_net.h>
+
+1365431188 /home/christian/Dropbox/Projekte/networking/src/json.hpp
+	<iostream>
+	<stack>
+	<string>
+	<vector>
+	<map>
+	<stdexcept>
+
+1365428627 /home/christian/Dropbox/Projekte/networking/src/utils.hpp
+	<chrono>
+	<queue>
+	<mutex>
+	<thread>
+	"json.hpp"
+
+1365428603 source:/home/christian/Dropbox/Projekte/networking/src/clientserver.cpp
+	"clientserver.hpp"
+
+1365425136 source:/home/christian/Dropbox/Projekte/networking/src/json.cpp
+	"json.hpp"
 

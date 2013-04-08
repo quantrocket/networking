@@ -1,13 +1,28 @@
 /*
-Copyright © 2013 Christian Glöckner <cgloeckner@freenet.de>
+Copyright (c) 2013 Christian Glöckner <cgloeckner@freenet.de>
 
 This file is part of the networking module:
     https://github.com/cgloeckner/networking
 
-It offers an event-based networking framework for games and other software.
+It offers a json-based networking framework for games and other software.
 
-The source code is released under CC BY-NC 3.0
-http://creativecommons.org/licenses/by-nc/3.0/
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 */
 
 #include "chatserver.hpp"
@@ -16,7 +31,7 @@ void server_handler(ChatServer* server) {
     server->handle();
 }
 
-ChatServer::ChatServer(unsigned short port)
+ChatServer::ChatServer(std::uint16_t port)
     : networking::Server() {
     this->start(port);
     this->handler.start(server_handler, this);
@@ -31,53 +46,68 @@ ChatServer::~ChatServer() {
 
 void ChatServer::handle() {
     while (this->isOnline()) {
-        // wait for next bundle
-        networking::Bundle* bundle = this->pop();
-        if (bundle != NULL) {
-            // handle bundle
-            switch (bundle->event->event_id) {
-                case E_LOGIN_REQUEST:
-                    this->login((LoginRequest*)(bundle->event), bundle->id);
-                    break;
-                case E_LOGOUT_REQUEST:
-                    this->logout((LogoutRequest*)(bundle->event), bundle->id);
-                    break;
-                case E_MESSAGE_REQUEST:
-                    this->message((MessageRequest*)(bundle->event), bundle->id);
-                    break;
+        // wait for next object
+        json::Value object = this->pop();
+        if (!object.isNull()) {
+            ClientID source = object["source"].getInteger();
+            json::Value payload = object["payload"];
+            std::string event = payload["event"].getString();
+
+            if (event == "LOGIN_REQUEST") {
+                this->login(payload, source);
+            } else if (event == "LOGOUT_REQUEST") {
+                this->logout(payload, source);
+            } else if (event == "MESSAGE_REQUEST") {
+                this->message(payload, source);
             }
-            delete bundle;
         } else {
             networking::delay(15);
         }
     }
 }
 
-void ChatServer::login(LoginRequest* data, ClientID id) {
+void ChatServer::login(json::Value data, ClientID id) {
     // seek id
     auto node = this->users.find(id);
     if (node != this->users.end()) {
         // loggin failed (user already logged in)
-        this->push(new LoginResponse(false, 0, ""), id);
+        json::Value answer;
+        answer["event"] = "LOGIN_RESPONSE";
+        answer["success"] = false;
+        this->push(answer, id);
         return;
     }
+    std::string username = data["username"].getString();
     // add user
-    this->users[id] = data->username;
+    this->users[id] = username;
     // loggin successful
-    this->push(new LoginResponse(true, id, data->username), id);
+    json::Value answer;
+    answer["event"] = "LOGIN_RESPONSE";
+    answer["success"] = true;
+    answer["id"] = id;
+    answer["username"] = username;
+    this->push(answer, id);
     node = this->users.begin();
     while (node != this->users.end()) {
         if (node->first != id) {
             // send all user ids & names to this client
-            this->push(new UserlistUpdate(true, node->first, node->second), id);
+            json::Value answer;
+            answer["event"] = "USERLIST_UPDATE";
+            answer["add"] = true;
+            answer["id"] = node->first;
+            answer["username"] = node->second;
+            this->push(answer, id);
             // send this new user to all other clients
-            this->push(new UserlistUpdate(true, id, data->username), node->first);
+            answer["id"] = id;
+            answer["username"] = username;
+            this->push(answer, node->first);
         }
         node++;
     }
 }
 
-void ChatServer::message(MessageRequest* data, ClientID id) {
+void ChatServer::message(json::Value data, ClientID id) {
+    std::string text = data["text"].getString();
     // seek id
     auto node = this->users.find(id);
     if (node == this->users.end()) {
@@ -85,16 +115,20 @@ void ChatServer::message(MessageRequest* data, ClientID id) {
         return;
     }
     // show message
-    std::cout << "<" << (node->second) << "> " << data->text << std::endl;
+    std::cout << "<" << (node->second) << "> " << text << std::endl;
     // broadcast message to clients
     node = this->users.begin();
     while (node != this->users.end()) {
-        this->push(new MessageResponse(data->text, id), node->first);
+        json::Value answer;
+        answer["event"] = "MESSAGE_RESPONSE";
+        answer["text"] = text;
+        answer["id"] = id;
+        this->push(answer, node->first);
         node++;
     }
 }
 
-void ChatServer::logout(LogoutRequest* data, ClientID id) {
+void ChatServer::logout(json::Value data, ClientID id) {
     // seek id
     auto node = this->users.find(id);
     if (node == this->users.end()) {
@@ -104,12 +138,20 @@ void ChatServer::logout(LogoutRequest* data, ClientID id) {
     std::string username = node->second;
     this->users.erase(node);
     // logout successful
-    this->push(new LogoutResponse(id), id);
+    json::Value answer;
+    answer["event"] = "LOGOUT_RESPONSE";
+    answer["id"] = id;
+    this->push(answer, id);
     node = this->users.begin();
     while (node != this->users.end()) {
         if (node->first != id) {
             // send this new user to all other clients
-            this->push(new UserlistUpdate(false, id, username), node->first);
+            json::Value answer;
+            answer["event"] = "USERLIST_UPDATE";
+            answer["add"] = false;
+            answer["id"] = id;
+            answer["username"] = username;
+            this->push(answer, node->first);
         }
         node++;
     }

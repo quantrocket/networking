@@ -1,4 +1,5 @@
 doxygen.config
+.old
 chatroom
 *~
 src/*~

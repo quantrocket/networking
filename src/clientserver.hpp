@@ -1,98 +1,75 @@
 /*
-Copyright © 2013 Christian Glöckner <cgloeckner@freenet.de>
+Copyright (c) 2013 Christian Glöckner <cgloeckner@freenet.de>
 
 This file is part of the networking module:
     https://github.com/cgloeckner/networking
 
-It offers an event-based networking framework for games and other software.
+It offers a json-based networking framework for games and other software.
 
-The source code is released under CC BY-NC 3.0
-http://creativecommons.org/licenses/by-nc/3.0/
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 */
 
-#ifndef SERVER_HPP
-#define SERVER_HPP
+#pragma once
+#ifndef CLIENT_SERVER_INCLUDE_GUARD
+#define CLIENT_SERVER_INCLUDE_GUARD
 
-#include <queue>
 #include <set>
 #include <map>
 #include <cstdint>
 
-#include "threading.hpp"
-#include "connection.hpp"
-#include "eventsystem.hpp"
+#include "tcp.hpp"
+#include "json.hpp"
+#include "utils.hpp"
 
 namespace networking {
 
-    class Bundle;
-    class Worker;
     class Server;
-    class Client;
 
     /// Type for client IDs (unsigned 16-bit integer with fixed size)
-    typedef uint16_t ClientID;
+    typedef std::uint16_t ClientID;
 
     /// Helper function for starting the server's accepter-loop
     /**
-     * This function will be started as a thread. Is calls the server's
-     *  accepter-loop to enable accepting clients in a seperate thread.
-     *  This thread is started and stopped by the server class.
+     * This function will be started as a Thread. Is calls the server's
+     *  accepter-loop to enable accepting clients in a seperate Thread.
+     *  This Thread is started and stopped by the server class.
      *  @param server: pointer to the server
      */
     void server_accept(Server* server);
+
     /// Helper function for starting wthe server's sending-loop
     /**
-     * This function will be started as a thread. It calls the server's
-     *  sending-loop to enable sending data in a seperate thread.
-     *  This thread is started and stopped by the server class.
+     * This function will be started as a Thread. It calls the server's
+     *  sending-loop to enable sending data in a seperate Thread.
+     *  This Thread is started and stopped by the server class.
      *  @param server: pointer to the server
      */
     void server_send(Server* server);
+
     /// Helper function for starting server's receiving-loop
     /**
-     * This function will be started as a thread. It calls the server's
-     *  receiving-loop to enable receiving data in a seperate thread.
-     *  This thread is started and stopped by the server class.
+     * This function will be started as a Thread. It calls the server's
+     *  receiving-loop to enable receiving data in a seperate Thread.
+     *  This Thread is started and stopped by the server class.
      *  @param server: pointer to the server
      */
     void server_recv(Server* server);
-    /// Helper function for starting client's receiving-sending-loop
-    /**
-     * This function will be started as a thread. It calls the client's
-     *  receiving-sending-loop to enable sending data in a seperate thread.
-     *  This thread is started and stopped by the client class.
-     *  @param client: pointer to the client
-     */
-    void client_handle(Client* client);
-
-    /// Bundle of client ID, event pointer and event size
-    /**
-     * This bundle of data contains the client ID, an event pointer and the
-     *  event's size. The client ID is used as source for receiving or as
-     *  destination for sending. The major use of this ID is at the server.
-     */
-    class Bundle {
-        public:
-            /// Constructor with id, event pointer and size
-            /**
-             * Creates a bundle of data from the given parameters.
-             *  @param id: client ID of this bundle
-             *  @param event: event-pointer
-             *  @param size: size of the event-data
-             */
-            Bundle(ClientID id, Event* event, std::size_t size);
-            /// Destructor
-            /**
-             * It will delete the given event-pointer.
-             */
-            virtual ~Bundle();
-            /// client ID
-            ClientID id;
-            /// event-pointer
-            Event* event;
-            /// size of event-data
-            std::size_t size;
-    };
 
     /// Worker
     /**
@@ -102,40 +79,46 @@ namespace networking {
      */
     class Worker {
         friend class Server;
+    
         protected:
             /// client ID
             ClientID id;
             /// related server
             Server* server;
             /// TCP link to the client
-            TcpLink* link;
+            Link* link;
+
             /// Disconnects the worker
-            void disconnect();
+            virtual void disconnect();
+
         public:
             /// Constructor
             /**
              * This creates a new worker at the related server dealing with the
              *  given TCP link. It will automatically retrieve the next valid
-             *  client ID and start the necessary threads
+             *  client ID and start the necessary Threads
              */
-            Worker(Server* server, TcpLink* link);
+            Worker(Server* server, Link* link);
+            
             /// Destructor
             /**
-             * This will close the link, shutdown the threads safely and clear
+             * This will close the link, shutdown the Threads safely and clear
              *  the outgoing queue.
              */
             virtual ~Worker();
+
             /// Returns whether the worker is online
             /**
              * Returns whether the worker is online or not.
              *  @return true if online
              */
-            bool isOnline();
+            virtual bool isOnline();
+        
     };
 
     /// Server
     /**
-     * The server handles all clients using threads. It can handle clients
+     * The server handles all clients using Threads. It can handle clients
      *  until a given, fixed maximum or more, if a maximum of -1 is given.
      *  Also it provides banning and unbanning IPs to refuse clients. The
      *  server contains an incomming queue with received bundles for all
@@ -147,9 +130,10 @@ namespace networking {
         friend void server_accept(Server* server);
         friend void server_send(Server* server);
         friend void server_recv(Server* server);
+    
         protected:
             /// Listener for accepting clients
-            TcpListener listener;
+            Listener listener;
             /// Thread for accepting-loop
             Thread accepter;
             /// Thread for sending-loop
@@ -157,78 +141,88 @@ namespace networking {
             /// Thread for receiving-loop
             Thread receiver;
             /// Maximum number of clients (-1 = infinite)
-            short max_clients;
+            std::int16_t max_clients;
             /// Next worker's ID
             ClientID next_id;
             /// Structure of all workers keyed by their IDs
             std::map<ClientID, Worker*> workers;
             /// Mutex for next_id and workers
-            Mutex workers_mutex;
+            std::mutex workers_mutex;
             /// Set of blocked IPs
             std::set<std::string> ips;
             /// Mutex for ips
-            Mutex ips_mutex;
-            /// Queue of incomming bundles
-            ThreadSafeQueue<Bundle> in;
-            /// Queue of outgoing bundles
-            ThreadSafeQueue<Bundle> out;
+            std::mutex ips_mutex;
+            /// Queue of incomming objects
+            JsonQueue in;
+            /// Queue of outgoing objects
+            JsonQueue out;
+            
             /// Accepter-loop
             void accept_loop();
             /// Sending-loop
             void send_loop();
             /// Receiving-loop
             void recv_loop();
+        
         public:
             /// Constructor
             /**
              * Create a new server with a maximum number of clients (or -1 for
              *  an undefined maximum).
              */
-            Server(short max_clients=-1);
+            Server(std::int16_t max_clients=-1);
+        
             /// Destructor
             /**
              * This will shutdown the server.
              */
             virtual ~Server();
+        
             /// Start the server to listen on a given port
             /**
              * Triggers the server to start listening on a given local port.
-             *  It will start the accepter-loop as a thread.
+             *  It will start the accepter-loop as a Thread.
              *  @param port: local port number
              */
-            void start(unsigned short port);
+            void start(std::uint16_t port);
+        
             /// Returns whether the server is online
             /**
              * Returns whether the server is online (= is listening) or not
              *  @return true if online
              */
             bool isOnline();
+        
             /// Shutdown the server
             /**
              * This will stop listening on a local port and shutdown the
-             *  accepter-loop thread safely. It also will disconnect all
-             *  workers, stop their threads and delete them from the server
+             *  accepter-loop Thread safely. It also will disconnect all
+             *  workers, stop their Threads and delete them from the server
              */
             void shutdown();
+        
             /// Disconnect a worker
             /**
-             * This will disconnect a worker, stop it's thread and delete it
+             * This will disconnect a worker, stop it's Thread and delete it
              *  from the server.
              *  @param id: client ID of the worker
              */
             void disconnect(ClientID id);
+        
             /// Block an IP-address
             /**
              * This will add the given IP-address to the blocking list
              *  @param ip: IP-address or hostname
              */
             void block(const std::string& ip);
+        
             /// Unblock an IP-address
             /**
              * This will remove the given IP-address from the blocking list
              *  @param ip: IP-address or hostname
              */
             void unblock(const std::string& ip);
+        
             /// Return the next bundle
             /**
              * This will return a pointer to the front bundle of the incomming
@@ -238,7 +232,8 @@ namespace networking {
              *  delete the bundle after handling it.
              *  @return pointer to the next bundle
              */
-            Bundle* pop();
+            json::Value pop();
+        
             /// Push an event to a worker
             /**
              * This will create a bundle using the destination id, the event-
@@ -250,24 +245,8 @@ namespace networking {
              *  @param event: event-pointer
              *  @param id: destination's client ID
              */
-            template <typename TEvent> void push(TEvent* event, ClientID id) {
-                this->out.push(new Bundle(id, event, sizeof(TEvent)));
-                /*
-                this->workers_mutex.lock();
-                // Search Worker
-                auto node = this->workers.find(id);
-                if (node != this->workers.end()) {
-                    Worker* worker = node->second;
-                    this->workers_mutex.unlock();
-                    // create bundle
-                    Bundle* bundle = new Bundle(id, event, sizeof(TEvent));
-                    // push to his queue
-                    this->out.push(bundle);
-                } else {
-                    this->workers_mutex.unlock();
-                    std::cerr << "No worker #" << id << " found" << std::endl;
-                }*/
-            }
+            void push(json::Value object, ClientID id);
+    
             /**
              * This will create new bundles using the event-pointer and the
              *  event data's size. This size is taken from the type TEvent of
@@ -278,68 +257,55 @@ namespace networking {
              *  of this method. The copies are automatically after sending.
              *  @param event: event-pointer
              */
-            template <typename TEvent> void push(TEvent* event) {
-                this->workers_mutex.lock();
-                auto workers = this->workers;
-                this->workers_mutex.unlock();
-                for (auto node = workers.begin(); node != workers.end(); node++) {
-                    if (node->second != NULL && node->second->isOnline()) {
-                        this->out.push(new Bundle(node->first,
-                            new TEvent(*event), sizeof(TEvent)));
-                    }
-                }
-                /*
-                auto node = this->workers.begin();
-                while (node != this->workers.end()) {
-                    if (node->second != NULL && node->second->isOnline()) {
-                        Worker* worker = node->second;
-                        // create bundle with copy of event
-                        Bundle* bundle = new Bundle(worker->id, new TEvent(*event), sizeof(TEvent));
-                        // push to each worker
-                        this->out.push(bundle);
-                    }
-                    node++;
-                }
-                // event was copied, so can be deleted
-                delete event;
-                this->workers_mutex.unlock();
-                */
-            }
+            void push(json::Value object);
     };
+    
+    class Client;
+
+    /// Helper function for starting client's receiving-sending-loop
+    /**
+     * This function will be started as a thread. It calls the client's
+     *  receiving-sending-loop to enable sending data in a seperate thread.
+     *  This thread is started and stopped by the client class.
+     *  @param client: pointer to the client
+     */
+    void client_handle(Client* client);
 
     /// Client
     /**
      * The client provides communication with a given server. Sending and
-     *  receiving data are handled in two seperate threads. Each event is
-     *  wrapped by a bundle, which contains the destination client ID and
-     *  the event data' size. These data are not necessary for the client's
-     *  basic work.
+     *  receiving data are handled in two seperate threads.
      */
     class Client {
         friend void client_handle(Client* client);
+
         private:
             /// Thread for sending-receiving-loop
             Thread handler;
             Thread receiver;
-            /// Queue for outgoing bundles
-            ThreadSafeQueue<Bundle> out;
-            /// Queue for incomming bundles
-            ThreadSafeQueue<Bundle> in;
+            /// Queues
+            JsonQueue out;
+            JsonQueue in;
+
             /// Sending-Receiving-loop
             void handle_loop();
+
         protected:
-            /// Tcp-Link to the server
-            TcpLink link;
-            /// Client ID (assigned by server)
+            /// Link to the server
+            Link link;
+            /// Client ID
             ClientID id;
+
         public:
             /// Constructor
             Client();
+
             /// Destructor
             /**
              * Will disconnect from the server
              */
             virtual ~Client();
+
             /// Establish connection to the server at the given IP and port
             /**
              * Establishs a connection to the server with the given IP-address,
@@ -351,19 +317,22 @@ namespace networking {
              *  @param ip: IP-address or hostname of the remote server
              *  @param port: port number of the remove server
              */
-            void connect(const std::string& ip, unsigned short port);
+            void connect(const std::string& ip, std::uint16_t port);
+
             /// Returns whether the client is online
             /**
              * Returns whether the client is connected to a server or not.
              *  @return true if connected
              */
             bool isOnline();
+
             /// Disconnect the current connection
             /**
              * This will close the current link to the server and safely stop
              *  the sending- and receiving-loop threads
              */
             void disconnect();
+
             /// Get the next incomming bundle
             /**
              * This returns the next incomming bundle from the front of the
@@ -371,8 +340,9 @@ namespace networking {
              *  the incomming queue is empty.
              *  @return pointer to bundle or NULL
              */
-            Bundle* pop();
-            /// Push an event for sending
+            json::Value pop();
+    
+            /// Push an json-object for sending
             /**
              * This will create a bundle using the current client ID, the given
              *  event-pointer and the event data's size. This size is taken
@@ -381,14 +351,11 @@ namespace networking {
              *  automatically deleted after sending to the server.
              *  @param event: event-pointer
              */
-            template <typename TEvent> void push(TEvent* event) {
-                // create bundle
-                Bundle* bundle = new Bundle(this->id, event, sizeof(TEvent));
-                // push to queue
-                this->out.push(bundle);
-            }
+            void push(json::Value data);
+
     };
 
 }
 
 #endif
+

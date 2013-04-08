@@ -1,26 +1,31 @@
-# Event-Based Networking Framework
+# JSON-Based Networking Framework
 ===
 
-This file is part of the networking module https://github.com/cgloeckner/networking. The project offers an event-based networking framework for games and other software. It's main purpose is to integrate into my own game project as well as integrate it into FLARE by Clint Bellanger one day.
+Copyright (c) 2013 Christian Glöckner <cgloeckner@freenet.de>
 
-The source code is released under CC BY-NC 3.0. Feel free to share and remix this work while using it for non-commercial purpose only. Please mention me as the base of your work. Please read http://creativecommons.org/licenses/by-nc/3.0/ for further information.
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+This file is part of the networking module https://github.com/cgloeckner/networking. The project offers a networking framework for games and other software using json-styled data. It's main purpose is to integrate into my own game project as well as integrate it into FLARE by Clint Bellanger one day.
+
+The source code is licenced under MIT. See COPYING for further information.
 
 Kind regards, Christian Glöckner
 
-# Customizing events
+# JSON over plain data
 ===
 
-Events mustn't contain pointers or other high-level data which are based on pointers. This limitation is founded in the easy way the system is sending and receiving data over the network. There is no serialization of given events. Therefore each event has to use primitive value types only. Remember to serialize and unserialize all data on your own before inserting these data into your derived event.
-
-Each event needs to implement at least the default-constructor and a copy-constructor-like constructor who gets a pointer to void. Remember to set the event_id to the right value. The void-pointer-constructor is used to assemble your events from a void-pointer, as used by `Event* Event::assemble(void* buffer)`.
-To customize receiving events you need to implement the static Event-method `Event* assemble(void* buffer)`. It is called by the NetworkingQueue each time the system tries to receive an event using a TCP-Link.
-
-There is a `generate.py` and an `example.cfg` to easily create customized events. At the moment the python-code is ugly and might be not easy to read. This will be improved in future.
+The first approach for my networking framework was about using plain data. I collected primitive values in structures (called "events") and sent them over the network. For correct identification it was necessary to give unique id to each event type and switch them after receiving. This whole ugly switching and typecasting can be reduced when using serialized data. Because of it's low overhead I decided to use JSON! It is also ready-to-use for maintenance and easy to read for humans.
 
 # Furthur limitations
 ===
 
 Currently there is no UDP support. The server-client code is completly based on TCP only. I'm not shure whether I already need UDP, so it will stay disabled for a non-specified while. Also multiple endianness is not supported. Consider this when shipping your application using the framework to different plattforms.
+
+Please pay attention to use `float` for floating point variables in the context of JSON Objects. Currenty `double` or `long double` are not supported, because some decimal place might be cut off when serializing with `std::to_string`.
 
 # Example
 ===
@@ -32,7 +37,7 @@ You can find a server-client-based chatroom example in the directory `example/`.
 
 Building the module is easy; just remember to link SDL and SDL_net. Also you need to mention C++11 to your compiler as well as pthreads. You can build the example just by
 
-    g++ -o chatroom src/*.cpp example/*.cpp -lSDL -lSDL_net --std=c++0x -pthread
+    g++ -o chatroom src/*.cpp example/*.cpp -lSDL_net --std=c++0x -pthread
 
 I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
@@ -40,5 +45,5 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 ===
 
 - event more detailed testing (e.g. for memory leaks)
-- improved code structure of `generate.py`
+
 
