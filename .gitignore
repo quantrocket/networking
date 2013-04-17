@@ -3,6 +3,7 @@ doxygen.config
 chatroom
 *~
 src/*~
+src/clientserver/*~
 example/*~
 obj/*
 obj/Debug/*

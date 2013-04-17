@@ -160,47 +160,6 @@ namespace networking {
                 this->in->push(data);
             }
     };
-    
-    /// Allows running a function as parallel process
-    /**
-     * This class wraps C++11-functionallity for calling a function as a
-     *  thread. The implementation can be changed for target systems which does
-     *  not support C++11 yet.
-     */
-    class Thread {
-        protected:
-            /// actual thread object
-            std::thread thread;
-        public:
-            /// Constructor
-            Thread() {
-            }
-            /// Destructor
-            virtual ~Thread() {
-                if (this->thread.joinable()) {
-                    this->thread.join();
-                }
-            }
-            /// Run a function as thread with a parameter
-            /**
-             * This method offers to run a function with the signature:
-             *      void function(T* parameter);
-             *  The type parameter T can be any type. Currently this supports
-             *  only using pointers as parameters.
-             *  @param param: parameter for the function
-             */
-            template <typename T>
-            inline void start(void (*func)(T*), T* param) {
-                this->thread = std::thread(func, param);
-            }
-            /// Waits for the thread and stops it.
-            inline void wait() {
-                try {
-                    this->thread.join();
-                } catch (const std::system_error& se) {
-                }
-            }
-    };
 
 }
 

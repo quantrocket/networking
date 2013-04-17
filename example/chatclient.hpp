@@ -31,35 +31,30 @@ SOFTWARE.
 #include <iostream>
 #include <map>
 
-#include "../src/clientserver.hpp"
+#include "../src/clientserver/client.hpp"
 
 using networking::ClientID;
 
 class ChatClient;
 
-void client_handler(ChatClient* client);
-
-class ChatClient: public networking::Client {
+class ChatClient: public networking::Client<ChatClient> {
     friend void client_handler(ChatClient* client);
 
     protected:
-        networking::Thread handler;
-
         std::map<ClientID, std::string> users;
 
-        void handle();
         void login(json::Value data);
         void message(json::Value data);
         void logout(json::Value data);
         void update(json::Value data);
-    
+
     public:
         ChatClient(const std::string& ip, std::uint16_t port);
         virtual ~ChatClient();
 
         bool authed;
         std::string username;
-    
+
 };
 
 #endif

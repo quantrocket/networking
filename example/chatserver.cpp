@@ -26,44 +26,22 @@ SOFTWARE.
 */
 
 #include "chatserver.hpp"
-
-void server_handler(ChatServer* server) {
-    server->handle();
-}
+#include "commands.hpp"
 
 ChatServer::ChatServer(std::uint16_t port)
-    : networking::Server() {
+    : networking::Server<ChatServer>() {
+
+    this->callbacks[commands::LOGIN_REQUEST]   = &ChatServer::login;
+    this->callbacks[commands::LOGOUT_REQUEST]  = &ChatServer::logout;
+    this->callbacks[commands::MESSAGE_REQUEST] = &ChatServer::message;
+
     this->start(port);
-    this->handler.start(server_handler, this);
     std::cout << "Server started" << std::endl;
 }
 
 ChatServer::~ChatServer() {
     this->listener.close();
-    this->handler.wait();
     std::cout << "Server stopped" << std::endl;
-}
-
-void ChatServer::handle() {
-    while (this->isOnline()) {
-        // wait for next object
-        json::Value object = this->pop();
-        if (!object.isNull()) {
-            ClientID source = object["source"].getInteger();
-            json::Value payload = object["payload"];
-            std::string event = payload["event"].getString();
-
-            if (event == "LOGIN_REQUEST") {
-                this->login(payload, source);
-            } else if (event == "LOGOUT_REQUEST") {
-                this->logout(payload, source);
-            } else if (event == "MESSAGE_REQUEST") {
-                this->message(payload, source);
-            }
-        } else {
-            networking::delay(15);
-        }
-    }
 }
 
 void ChatServer::login(json::Value data, ClientID id) {
@@ -72,7 +50,7 @@ void ChatServer::login(json::Value data, ClientID id) {
     if (node != this->users.end()) {
         // loggin failed (user already logged in)
         json::Value answer;
-        answer["event"] = "LOGIN_RESPONSE";
+        answer["command"] = commands::LOGIN_RESPONSE;
         answer["success"] = false;
         this->push(answer, id);
         return;
@@ -82,7 +60,7 @@ void ChatServer::login(json::Value data, ClientID id) {
     this->users[id] = username;
     // loggin successful
     json::Value answer;
-    answer["event"] = "LOGIN_RESPONSE";
+    answer["command"] = commands::LOGIN_RESPONSE;
     answer["success"] = true;
     answer["id"] = id;
     answer["username"] = username;
@@ -92,7 +70,7 @@ void ChatServer::login(json::Value data, ClientID id) {
         if (node->first != id) {
             // send all user ids & names to this client
             json::Value answer;
-            answer["event"] = "USERLIST_UPDATE";
+            answer["command"] = commands::USERLIST_UPDATE;
             answer["add"] = true;
             answer["id"] = node->first;
             answer["username"] = node->second;
@@ -120,7 +98,7 @@ void ChatServer::message(json::Value data, ClientID id) {
     node = this->users.begin();
     while (node != this->users.end()) {
         json::Value answer;
-        answer["event"] = "MESSAGE_RESPONSE";
+        answer["command"] = commands::MESSAGE_RESPONSE;
         answer["text"] = text;
         answer["id"] = id;
         this->push(answer, node->first);
@@ -139,7 +117,7 @@ void ChatServer::logout(json::Value data, ClientID id) {
     this->users.erase(node);
     // logout successful
     json::Value answer;
-    answer["event"] = "LOGOUT_RESPONSE";
+    answer["command"] = commands::LOGOUT_RESPONSE;
     answer["id"] = id;
     this->push(answer, id);
     node = this->users.begin();
@@ -147,7 +125,7 @@ void ChatServer::logout(json::Value data, ClientID id) {
         if (node->first != id) {
             // send this new user to all other clients
             json::Value answer;
-            answer["event"] = "USERLIST_UPDATE";
+            answer["command"] = commands::USERLIST_UPDATE;
             answer["add"] = false;
             answer["id"] = id;
             answer["username"] = username;

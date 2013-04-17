@@ -26,45 +26,23 @@ SOFTWARE.
 */
 
 #include "chatclient.hpp"
-
-void client_handler(ChatClient* client) {
-    client->handle();
-}
+#include "commands.hpp"
 
 ChatClient::ChatClient(const std::string& ip, std::uint16_t port)
-    : networking::Client() {
+    : networking::Client<ChatClient>() {
     this->authed = false;
+
+    this->callbacks[commands::LOGIN_RESPONSE]   = &ChatClient::login;
+    this->callbacks[commands::LOGOUT_RESPONSE]  = &ChatClient::logout;
+    this->callbacks[commands::MESSAGE_RESPONSE] = &ChatClient::message;
+    this->callbacks[commands::USERLIST_UPDATE]  = &ChatClient::update;
+
     this->connect(ip, port);
-    this->handler.start(client_handler, this);
     std::cout << "Client started" << std::endl;
 }
 
 ChatClient::~ChatClient() {
     this->link.close();
-    this->handler.wait();
-}
-
-void ChatClient::handle() {
-    while (this->isOnline()) {
-        // wait for next object
-        json::Value object = this->pop();
-        if (!object.isNull()) {
-            json::Value payload = object["payload"];
-            std::string event = payload["event"].getString();
-
-            if (event == "LOGIN_RESPONSE") {
-                this->login(payload);
-            } else if (event == "LOGOUT_RESPONSE") {
-                this->logout(payload);
-            } else if (event == "MESSAGE_RESPONSE") {
-                this->message(payload);
-            } else if (event == "USERLIST_UPDATE") {
-                this->update(payload);
-            }
-        } else {
-            networking::delay(15);
-        }
-    }
 }
 
 void ChatClient::login(json::Value data) {

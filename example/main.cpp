@@ -27,6 +27,7 @@ SOFTWARE.
 
 #include <iostream>
 
+#include "commands.hpp"
 #include "chatclient.hpp"
 #include "chatserver.hpp"
 
@@ -53,7 +54,7 @@ int main(int argc, char **argv) {
                 getline(std::cin, input);
                 if (input == "quit") {
                     json::Value request;
-                    request["event"] = "LOGOUT_REQUEST";
+                    request["command"] = commands::LOGOUT_REQUEST;
                     server->push(request);
                     break;
                 }
@@ -66,7 +67,7 @@ int main(int argc, char **argv) {
             getline(std::cin, input);
             client = new ChatClient(argv[1], (std::uint16_t)(atoi(argv[2])));
             json::Value request;
-            request["event"] = "LOGIN_REQUEST";
+            request["command"] = commands::LOGIN_REQUEST;
             request["username"] = input;
             client->push(request);
             while (client->isOnline()) {
@@ -74,11 +75,11 @@ int main(int argc, char **argv) {
                 if (!client->authed) { continue; }
                 if (input == "quit") {
                     json::Value request;
-                    request["event"] = "LOGOUT_REQUEST";
+                    request["command"] = commands::LOGOUT_REQUEST;
                     client->push(request);
                 } else {
                     json::Value request;
-                    request["event"] = "MESSAGE_REQUEST";
+                    request["command"] = commands::MESSAGE_REQUEST;
                     request["text"] = input;
                     client->push(request);
                 }

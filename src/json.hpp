@@ -144,6 +144,73 @@ namespace json {
             Value(Array array);
             Value(Object object);
 
+            inline Value& operator=(char c) {
+                this->type = STRING;
+                this->string = "";
+                this->string += c;
+                return *this;
+            }
+            inline Value& operator=(const char* string) {
+                this->type = STRING;
+                this->string = std::string(string);
+                return *this;
+            }
+            inline Value& operator=(const std::string& string) {
+                this->type = STRING;
+                this->string = string;
+                return *this;
+            }
+            inline Value& operator=(short integer) {
+                this->type = INTEGER;
+                this->integer = integer;
+                return *this;
+            }
+            inline Value& operator=(unsigned short integer) {
+                this->type = INTEGER;
+                this->integer = integer;
+                return *this;
+            }
+            inline Value& operator=(int integer) {
+                this->type = INTEGER;
+                this->integer = integer;
+                return *this;
+            }
+            inline Value& operator=(unsigned int integer) {
+                this->type = INTEGER;
+                this->integer = integer;
+                return *this;
+            }
+            inline Value& operator=(long integer) {
+                this->type = INTEGER;
+                this->integer = integer;
+                return *this;
+            }
+            inline Value& operator=(unsigned long integer) {
+                this->type = INTEGER;
+                this->integer = integer;
+                return *this;
+            }
+            inline Value& operator=(float floating) {
+                this->type = FLOAT;
+                this->floating = floating;
+                return *this;
+            }
+            inline Value& operator=(bool boolean) {
+                this->type = BOOLEAN;
+                this->boolean = boolean;
+                return *this;
+            }
+            inline Value& operator=(Array array) {
+                this->type = ARRAY;
+                this->array = array;
+                return *this;
+            }
+            inline Value& operator=(Object object) {
+                this->type = OBJECT;
+                this->object = object;
+                return *this;
+            }
+
             bool isString();
             bool isInteger();
             bool isFloat();

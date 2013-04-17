@@ -44,20 +44,20 @@ namespace networking {
 
         protected:
             std::string msg;
-    
+
         public:
             NetworkError(const std::string& msg) throw() {
                 this->msg = msg;
                 std::cerr << "Networking error occured: "
                           << this->msg << std::endl;
             }
-    
+
             virtual ~NetworkError() throw() {}
-    
+
             virtual const char* what() const throw() {
                 return this->msg.c_str();
             }
-    
+
     };
 
     /// An exception class used in case of a broken connection
@@ -65,20 +65,20 @@ namespace networking {
 
         protected:
             std::string msg;
-    
+
         public:
             BrokenPipe() throw() {
                 this->msg = "Broken pipe";
                 std::cerr << "Networking error occured: "
                           << this->msg << std::endl;
             }
-    
+
             virtual ~BrokenPipe() throw() {}
-    
+
             virtual const char* what() const throw() {
                 return this->msg.c_str();
             }
-    
+
     };
 
     /// A host with ip and port number
@@ -89,7 +89,7 @@ namespace networking {
     struct Host {
         /// ip-address structure (from SDL_net)
         IPaddress* addr;
-    
+
         /// Constructor resolving host and port
         /**
          * This resolves the given hostname and port number and creates the
@@ -104,7 +104,7 @@ namespace networking {
                                    + std::string(SDLNet_GetError()));
             }
         }
-    
+
         /// Constructor resolving a port on localhost
         /**
          * This is used by servers to resolve a port on the local machine
@@ -117,7 +117,7 @@ namespace networking {
                                    + std::string(SDLNet_GetError()));
             }
         }
-    
+
         /// Constructor using a given IP-address
         /**
          * Creates an exact copy of the given IPaddress object.
@@ -128,14 +128,14 @@ namespace networking {
             this->addr->host = addr->host;
             this->addr->port = addr->port;
         }
-    
+
         /// Destructor
         ~Host() {
             if (this->addr != NULL) {
                 delete this->addr;
             }
         }
-    
+
         /// Get IP-address or hostname
         /**
          * Returns the IP-address or hostname of this host.
@@ -151,7 +151,7 @@ namespace networking {
             return std::to_string(a) + "." + std::to_string(b) + "."
                     + std::to_string(c) + "." + std::to_string(d);
         }
-    
+
         /// Get port number
         /**
          * Returns the port number of this host.
@@ -160,7 +160,7 @@ namespace networking {
         inline std::uint16_t port() {
             return SDLNet_Read16(&(this->addr->port));
         }
-    
+
     };
 
     /// A link class based on a TCP-socket
@@ -171,7 +171,7 @@ namespace networking {
      */
     class Link {
         friend class Listener;
-    
+
         protected:
             /// socket set used for non-blocking receive
             SDLNet_SocketSet set;
@@ -179,7 +179,7 @@ namespace networking {
             TCPsocket socket;
             /// Describes whether the link is online or not
             bool online;
-        
+
         public:
             /// Constructor for an offline link
             Link()
@@ -188,7 +188,7 @@ namespace networking {
                 , online(false)
                 , host(NULL) {
             }
-        
+
             /// Constructor for an online, given link
             /**
              * Creates the link from a given TCP-socket.
@@ -206,7 +206,7 @@ namespace networking {
                 }
                 this->host = new Host(SDLNet_TCP_GetPeerAddress(socket));
             }
-        
+
             /// Destructor
             virtual ~Link() {
                 if (this->socket != NULL) {
@@ -214,7 +214,7 @@ namespace networking {
                 }
                 SDLNet_FreeSocketSet(this->set);
             }
-        
+
             /// Opens the connection to a host on a port
             /**
              * Resolves the host and establishs a connection. The local port
@@ -238,7 +238,7 @@ namespace networking {
                 }
                 this->online = true;
             }
-        
+
             /// Closes the connection
             void close() {
                 if (this->socket == NULL) {
@@ -254,7 +254,7 @@ namespace networking {
                 this->online = false;
                 this->host = NULL;
             }
-        
+
             /// Returns whether the link is online or not
             /**
              * Returns whether the link is online or not. A previously broken
@@ -264,7 +264,7 @@ namespace networking {
             inline bool isOnline() {
                 return this->online;
             }
-        
+
             /// Returns whether there is activity on the socket
             /**
              * Describes whether there is activity on the socket. This uses a
@@ -280,7 +280,7 @@ namespace networking {
                 // there is just one socket in the set
                 return (numready == 1 && SDLNet_SocketReady(this->socket) != 0);
             }
-        
+
             /// Send a string
             /**
              * This allows to send a string with a fixed length given by the
@@ -313,7 +313,7 @@ namespace networking {
                     throw BrokenPipe();
                 }
             }
-        
+
             /// Receive a string
             /**
              * This allows to receive a string with a fixed length, given
@@ -356,10 +356,10 @@ namespace networking {
                 free(buffer);
                 return s;
             }
-        
+
             /// Host data of the link
             Host* host;
-        
+
     };
 
     /// A listener class for TCP links
@@ -371,20 +371,20 @@ namespace networking {
         protected:
             /// server socket used for listening
             TCPsocket socket;
-        
+
         public:
             /// Constructor
             Listener()
                 : socket(NULL) {
             }
-        
+
             /// Destructor
             virtual ~Listener(){
                 if (this->socket != NULL) {
                     this->close();
                 }
             }
-        
+
             /// Starts listening on a local port
             /**
              * This starts the server socket on a given local port.
@@ -401,7 +401,7 @@ namespace networking {
                                        + std::string(SDLNet_GetError()));
                 }
             }
-        
+
             /// Returns whether the server socket is online or not
             /**
              * Returns whether the server socke4t is online or not
@@ -410,7 +410,7 @@ namespace networking {
             inline bool isOnline() {
                 return (this->socket != NULL);
             }
-        
+
             /// Stops listening
             /**
              * This stops the server socket on the current local port.
@@ -422,7 +422,7 @@ namespace networking {
                 SDLNet_TCP_Close(this->socket);
                 this->socket = NULL;
             }
-        
+
             /// Accept an incomming connection on TCP
             /**
              * This accepts an incomming connection on TCP and returns a
@@ -440,7 +440,7 @@ namespace networking {
                 }
                 return new Link(tmp);
             }
-        
+
     };
 
 }
