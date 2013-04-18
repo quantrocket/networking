@@ -25,31 +25,37 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef CHATSERVER_HPP
-#define CHATSERVER_HPP
+#ifndef CHATCLIENT_HPP
+#define CHATCLIENT_HPP
 
 #include <iostream>
 #include <map>
 
-#include "../src/clientserver/server.hpp"
+#include "../net/client.hpp"
 
-using networking::ClientID;
+class ChatClient;
 
-class ChatServer;
-
-class ChatServer: public networking::Server<ChatServer> {
-    friend void server_handler(ChatServer* server);
+class ChatClient: public net::Client<ChatClient> {
+    friend void client_handler(ChatClient* client);
 
     protected:
-        std::map<ClientID, std::string> users;
+        std::map<net::ClientID, std::string> users;
 
-        void login(json::Value data, ClientID id);
-        void message(json::Value data, ClientID id);
-        void logout(json::Value data, ClientID id);
+        void login(json::Var data);
+        void message(json::Var data);
+        void logout(json::Var data);
+        void update(json::Var data);
 
     public:
-        ChatServer(std::uint16_t port);
-        virtual ~ChatServer();
+        ChatClient(const std::string& ip, std::uint16_t port);
+        virtual ~ChatClient();
+
+        bool authed;
+        std::string username;
+        
+        void request_login(const std::string& username);
+        void request_logout();
+        void request_message(const std::string& message);
 
 };
 

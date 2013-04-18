@@ -142,7 +142,7 @@ namespace json {
         return result;
     }
 
-    std::string Value::dumpString() {
+    std::string Var::dumpString() {
         // @todo: special char escape, these are: "/\bfnrt
         //  as well was u-Unicode with 4 hex digits
         std::string dump = "";
@@ -158,15 +158,15 @@ namespace json {
         return dump;
     }
 
-    std::string Value::dumpInteger() {
+    std::string Var::dumpInteger() {
         return std::to_string(this->integer);
     }
 
-    std::string Value::dumpFloat() {
+    std::string Var::dumpFloat() {
         return std::to_string(this->floating);
     }
 
-    std::string Value::dumpBoolean() {
+    std::string Var::dumpBoolean() {
         if (this->boolean) {
             return "true";
         } else {
@@ -174,7 +174,7 @@ namespace json {
         }
     }
 
-    std::string Value::dumpArray(long indent) {
+    std::string Var::dumpArray(long indent) {
         std::string dump = "";
         dump += '[';
         if (indent > -1) {
@@ -206,7 +206,7 @@ namespace json {
         return dump;
     }
 
-    std::string Value::dumpObject(long indent) {
+    std::string Var::dumpObject(long indent) {
         std::string dump = "";
         dump += '{';
         if (indent > -1) {
@@ -223,7 +223,7 @@ namespace json {
                 dump += '\t';
             }
             std::string key = n->first;
-            Value value = n->second;
+            Var value = n->second;
             dump += key + ':';
             if (indent > -1) {
                 dump += '\t' + value.dump(indent + 1);
@@ -241,12 +241,12 @@ namespace json {
         return dump;
     }
 
-    void Value::parseArray(const std::string& dump) {
+    void Var::parseArray(const std::string& dump) {
         std::vector<std::string> parts = split(dump, ',');
         Array result;
         // iterate all values
         for (auto p = parts.begin(); p != parts.end(); p++) {
-            Value value;
+            Var value;
             // parse and append value
             value.load(*p, false);
             result.push_back(value);
@@ -255,7 +255,7 @@ namespace json {
         this->array = result;
     }
 
-    void Value::parseObject(const std::string& dump) {
+    void Var::parseObject(const std::string& dump) {
         std::vector<std::string> parts = split(dump, ',');
         Object result;
         // iterate all pairs
@@ -267,7 +267,7 @@ namespace json {
             }
             // parse key and value
             std::string key = tmp[0];
-            Value value;
+            Var value;
             value.load(tmp[1], false);
             result[key] = value;
         }
@@ -275,140 +275,140 @@ namespace json {
         this->object = result;
     }
 
-    Value::Value()
+    Var::Var()
         : type(UNDEFINED) {
     }
 
-    Value::Value(char c)
+    Var::Var(char c)
          : type(STRING)
          , string("") {
          this->string += c;
     }
 
-    Value::Value(const char* string)
+    Var::Var(const char* string)
             : type(STRING)
             , string(string) {
     }
 
-    Value::Value(const std::string& string)
+    Var::Var(const std::string& string)
         : type(STRING)
         , string(string) {
     }
 
-    Value::Value(short integer)
+    Var::Var(short integer)
         : type(INTEGER)
         , integer(integer) {
     }
 
-    Value::Value(unsigned short integer)
+    Var::Var(unsigned short integer)
         : type(INTEGER)
         , integer(integer) {
     }
 
-    Value::Value(int integer)
+    Var::Var(int integer)
          : type(INTEGER)
          , integer(integer) {
     }
 
-    Value::Value(unsigned int integer)
+    Var::Var(unsigned int integer)
          : type(INTEGER)
          , integer(integer) {
     }
 
-    Value::Value(long integer)
+    Var::Var(long integer)
          : type(INTEGER)
          , integer(integer) {
     }
 
-    Value::Value(unsigned long integer)
+    Var::Var(unsigned long integer)
          : type(INTEGER)
          , integer(integer) {
     }
 
-    Value::Value(float floating)
+    Var::Var(float floating)
         : type(FLOAT)
         , floating(floating) {
     }
 
-    Value::Value(bool boolean)
+    Var::Var(bool boolean)
         : type(BOOLEAN)
         , boolean(boolean) {
     }
 
-    Value::Value(Array array)
+    Var::Var(Array array)
         : type(ARRAY)
         , array(array) {
     }
 
-    Value::Value(Object object)
+    Var::Var(Object object)
         : type(OBJECT)
         , object(object) {
     }
 
-    bool Value::isString() {
+    bool Var::isString() {
         return this->type == STRING;
     }
-    bool Value::isInteger() {
+    bool Var::isInteger() {
         return this->type == INTEGER;
     }
-    bool Value::isFloat() {
+    bool Var::isFloat() {
         return this->type == FLOAT;
     }
-    bool Value::isBoolean() {
+    bool Var::isBoolean() {
         return this->type == BOOLEAN;
     }
-    bool Value::isArray() {
+    bool Var::isArray() {
         return this->type == ARRAY;
     }
-    bool Value::isObject() {
+    bool Var::isObject() {
         return this->type == OBJECT;
     }
-    bool Value::isNull() {
+    bool Var::isNull() {
         return this->type == UNDEFINED;
     }
 
-    std::string Value::getString() {
+    std::string Var::getString() {
     if (this->type == STRING) {
         return this->string;
         }
         throw TypeError(STRING, this->type);
     }
 
-    long Value::getInteger() {
+    long Var::getInteger() {
         if (this->type == INTEGER) {
             return this->integer;
         }
         throw TypeError(INTEGER, this->type);
     }
 
-    float Value::getFloat() {
+    float Var::getFloat() {
         if (this->type == FLOAT) {
             return this->floating;
         }
         throw TypeError(FLOAT, this->type);
     }
 
-    bool Value::getBoolean() {
+    bool Var::getBoolean() {
         if (this->type == BOOLEAN) {
             return this->boolean;
         }
         throw TypeError(BOOLEAN, this->type);
     }
 
-    Array Value::getArray() {
+    Array Var::getArray() {
         if (this->type == ARRAY) {
             return this->array;
         }
         throw TypeError(ARRAY, this->type);
     }
-    Object Value::getObject() {
+    Object Var::getObject() {
         if (this->type == OBJECT) {
             return this->object;
         }
         throw TypeError(OBJECT, this->type);
     }
 
-    bool Value::operator==(const Value& other) {
+    bool Var::operator==(const Var& other) {
         if (this->type == other.type) {
             switch (this->type) {
                 case UNDEFINED:
@@ -462,11 +462,11 @@ namespace json {
         return false;
     }
 
-    bool Value::operator!=(const Value& other) {
+    bool Var::operator!=(const Var& other) {
         return !(*this == other);
     }
 
-    Value& Value::operator=(const Value& other) {
+    Var& Var::operator=(const Var& other) {
         if (*this != other) {
             // reset all values
             this->string   = "";
@@ -504,22 +504,22 @@ namespace json {
         return *this;
     }
 
-    Value& Value::operator[](const std::string& key) {
+    Var& Var::operator[](const std::string& key) {
         this->type = OBJECT;
         return this->object[key];
     }
 
-    Value& Value::operator[](const long& index) {
+    Var& Var::operator[](const long& index) {
         this->type = ARRAY;
         return this->array[index];
     }
 
-    void Value::append(Value value) {
+    void Var::append(Var value) {
         this->type = ARRAY;
         this->array.push_back(value);
     }
 
-    void Value::load(const std::string& str, bool trim_it) {
+    void Var::load(const std::string& str, bool trim_it) {
         // trim spaces, tabulators and newlines
         std::string dump = str;
         if (trim_it) {
@@ -567,28 +567,28 @@ namespace json {
         }
     }
 
-    std::string Value::dump(long indent) {
+    std::string Var::dump(long indent) {
         switch (this->type) {
             case UNDEFINED:
                 return "null";
                 break;
             case STRING:
-                return Value::dumpString();
+                return Var::dumpString();
                 break;
             case INTEGER:
-                return Value::dumpInteger();
+                return Var::dumpInteger();
                 break;
             case FLOAT:
-                return Value::dumpFloat();
+                return Var::dumpFloat();
                 break;
             case BOOLEAN:
-                return Value::dumpBoolean();
+                return Var::dumpBoolean();
                 break;
             case ARRAY:
-                return Value::dumpArray(indent);
+                return Var::dumpArray(indent);
                 break;
             case OBJECT:
-                return Value::dumpObject(indent);
+                return Var::dumpObject(indent);
                 break;
         }
         return "";

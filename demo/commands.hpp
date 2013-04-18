@@ -29,20 +29,17 @@ SOFTWARE.
 #ifndef COMMANDS_HPP_INCLUDED
 #define COMMANDS_HPP_INCLUDED
 
-#include "../src/clientserver/server.hpp"
-#include "../src/clientserver/client.hpp"
-
-using networking::CommandID;
+#include "../net/common.hpp"
 
 namespace commands {
 
-    const CommandID LOGIN_REQUEST    = 1;
-    const CommandID LOGIN_RESPONSE   = 2;
-    const CommandID LOGOUT_REQUEST   = 3;
-    const CommandID LOGOUT_RESPONSE  = 4;
-    const CommandID MESSAGE_REQUEST  = 5;
-    const CommandID MESSAGE_RESPONSE = 6;
-    const CommandID USERLIST_UPDATE  = 7;
+    const net::CommandID LOGIN_REQUEST    = 1;
+    const net::CommandID LOGIN_RESPONSE   = 2;
+    const net::CommandID LOGOUT_REQUEST   = 3;
+    const net::CommandID LOGOUT_RESPONSE  = 4;
+    const net::CommandID MESSAGE_REQUEST  = 5;
+    const net::CommandID MESSAGE_RESPONSE = 6;
+    const net::CommandID USERLIST_UPDATE  = 7;
 
 }
 

@@ -2,9 +2,8 @@ doxygen.config
 .old
 chatroom
 *~
-src/*~
-src/clientserver/*~
-example/*~
+net/*~
+demo/*~
 obj/*
 obj/Debug/*
 obj/Release/*

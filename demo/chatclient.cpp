@@ -29,14 +29,14 @@ SOFTWARE.
 #include "commands.hpp"
 
 ChatClient::ChatClient(const std::string& ip, std::uint16_t port)
-    : networking::Client<ChatClient>() {
-    this->authed = false;
+    : net::Client<ChatClient>() {
 
     this->callbacks[commands::LOGIN_RESPONSE]   = &ChatClient::login;
     this->callbacks[commands::LOGOUT_RESPONSE]  = &ChatClient::logout;
     this->callbacks[commands::MESSAGE_RESPONSE] = &ChatClient::message;
     this->callbacks[commands::USERLIST_UPDATE]  = &ChatClient::update;
 
+    this->authed = false;
     this->connect(ip, port);
     std::cout << "Client started" << std::endl;
 }
@@ -45,8 +45,8 @@ ChatClient::~ChatClient() {
     this->link.close();
 }
 
-void ChatClient::login(json::Value data) {
-    ClientID id = data["id"].getInteger();
+void ChatClient::login(json::Var data) {
+    net::ClientID id = data["id"].getInteger();
     std::string username = data["username"].getString();
     bool success = data["success"].getBoolean();
     if (!this->authed && id == this->id) {
@@ -60,8 +60,8 @@ void ChatClient::login(json::Value data) {
     }
 }
 
-void ChatClient::message(json::Value data) {
-    ClientID id = data["id"].getInteger();
+void ChatClient::message(json::Var data) {
+    net::ClientID id = data["id"].getInteger();
     std::string text = data["text"].getString();
     if (this->authed) {
         auto node = this->users.find(id);
@@ -73,8 +73,8 @@ void ChatClient::message(json::Value data) {
     }
 }
 
-void ChatClient::logout(json::Value data) {
-    ClientID id = data["id"].getInteger();
+void ChatClient::logout(json::Var data) {
+    net::ClientID id = data["id"].getInteger();
     if (this->authed && id == this->id) {
         std::cout << "You are leaving the chat." << std::endl;
         this->authed = false;
@@ -84,9 +84,9 @@ void ChatClient::logout(json::Value data) {
     }
 }
 
-void ChatClient::update(json::Value data) {
+void ChatClient::update(json::Var data) {
     bool add = data["add"].getBoolean();
-    ClientID id = data["id"].getInteger();
+    net::ClientID id = data["id"].getInteger();
     std::string username = data["username"].getString();
     if (add) {
         // add to userlist
@@ -105,4 +105,23 @@ void ChatClient::update(json::Value data) {
     }
 }
 
+void ChatClient::request_login(const std::string& username) {
+    json::Var request;
+    request["command"] = commands::LOGIN_REQUEST;
+    request["username"] = username;
+    this->push(request);
+}
+
+void ChatClient::request_logout() {
+    json::Var request;
+    request["command"] = commands::LOGOUT_REQUEST;
+    this->push(request);
+}
+
+void ChatClient::request_message(const std::string& message) {
+    json::Var request;
+    request["command"] = commands::MESSAGE_REQUEST;
+    request["text"] = message;
+    this->push(request);
+}
 

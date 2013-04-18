@@ -26,21 +26,19 @@ SOFTWARE.
 */
 
 #pragma once
-#ifndef CLIENT_INCLUDE_GUARD
-#define CLIENT_INCLUDE_GUARD
+#ifndef NET_CLIENT_INCLUDE_GUARD
+#define NET_CLIENT_INCLUDE_GUARD
 
 #include <set>
 #include <map>
 #include <cstdint>
 #include <thread>
 
-#include "../tcp.hpp"
-#include "../json.hpp"
-#include "../utils.hpp"
-
+#include "link.hpp"
+#include "json.hpp"
 #include "common.hpp"
 
-namespace networking {
+namespace net {
 
     template <typename Derived> class Client;
 
@@ -58,13 +56,13 @@ namespace networking {
             /// Thread for handle-loop
             std::thread handler;
             /// Queues
-            JsonQueue out;
-            JsonQueue in;
+            utils::SyncQueue<json::Var> out;
+            utils::SyncQueue<json::Var> in;
 
             /// Command-Callback Mapper
-            std::map<CommandID, void (Derived::*)(json::Value)> callbacks;
+            std::map<CommandID, void (Derived::*)(json::Var)> callbacks;
             /// Link to the server
-            Link link;
+            tcp::Link link;
             /// Client ID
             ClientID id;
 
@@ -86,7 +84,7 @@ namespace networking {
                 while (this->isOnline()) {
                     // Send All JSON Objects
                     while (true) {
-                        json::Value object = this->out.pop();
+                        json::Var object = this->out.pop();
                         if (object.isNull()) {
                             // Nothing Left
                             break;
@@ -114,23 +112,23 @@ namespace networking {
                             return;
                         }
                         // Deserialize JSON Object
-                        json::Value object;
+                        json::Var object;
                         object.load(dump);
                         this->in.push(object);
                     }
-                    delay(25);
+                    utils::delay(25);
                 }
             }
             /// Handle-loop
             void handle_loop()  {
                 while (this->isOnline()) {
                     // wait for next object
-                    json::Value object = this->pop();
+                    json::Var object = this->pop();
                     if (object.isNull()) {
                         // Null-Object
-                        networking::delay(15);
+                        utils::delay(15);
                     } else {
-                        json::Value payload = object["payload"];
+                        json::Var payload = object["payload"];
                         CommandID command_id = payload["command"].getInteger();
                         // Search callback
                         auto entry = this->callbacks.find(command_id);
@@ -166,7 +164,7 @@ namespace networking {
                 this->link.open(ip, port);
                 // receive client id
                 std::string dump = this->link.read();
-                json::Value welcome;
+                json::Var welcome;
                 welcome.load(dump);
                 this->id = welcome["id"].getInteger();
                 // start threads
@@ -206,7 +204,7 @@ namespace networking {
              *  the incomming queue is empty.
              *  @return pointer to bundle or NULL
              */
-            json::Value pop() {
+            json::Var pop() {
                 return this->in.pop();
             }
 
@@ -219,7 +217,7 @@ namespace networking {
              *  automatically deleted after sending to the server.
              *  @param event: event-pointer
              */
-            void push(json::Value data){
+            void push(json::Var data){
                 this->out.push(data);
             }
 

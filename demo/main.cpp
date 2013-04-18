@@ -38,10 +38,6 @@ int main(int argc, char **argv) {
     ChatServer* server = NULL;
     ChatClient* client = NULL;
 
-    /*if (SDL_Init(0) == -1) {
-        std::cerr << "SDL_Init: " << SDL_GetError() << std::endl;
-        return 1;
-    }*/
     if (SDLNet_Init() == -1) {
         std::cerr << "SDLNet_Init: " << SDLNet_GetError() << std::endl;
         return 1;
@@ -53,9 +49,7 @@ int main(int argc, char **argv) {
             while (true) {
                 getline(std::cin, input);
                 if (input == "quit") {
-                    json::Value request;
-                    request["command"] = commands::LOGOUT_REQUEST;
-                    server->push(request);
+                    server->request_logout();
                     break;
                 }
             }
@@ -66,22 +60,14 @@ int main(int argc, char **argv) {
             std::cout << "Username: ";
             getline(std::cin, input);
             client = new ChatClient(argv[1], (std::uint16_t)(atoi(argv[2])));
-            json::Value request;
-            request["command"] = commands::LOGIN_REQUEST;
-            request["username"] = input;
-            client->push(request);
+            client->request_login(input);
             while (client->isOnline()) {
                 getline(std::cin, input);
                 if (!client->authed) { continue; }
                 if (input == "quit") {
-                    json::Value request;
-                    request["command"] = commands::LOGOUT_REQUEST;
-                    client->push(request);
+                    client->request_logout();
                 } else {
-                    json::Value request;
-                    request["command"] = commands::MESSAGE_REQUEST;
-                    request["text"] = input;
-                    client->push(request);
+                    client->request_message(input);
                 }
             }
             delete client;

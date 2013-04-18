@@ -29,7 +29,7 @@ SOFTWARE.
 #include "commands.hpp"
 
 ChatServer::ChatServer(std::uint16_t port)
-    : networking::Server<ChatServer>() {
+    : net::Server<ChatServer>() {
 
     this->callbacks[commands::LOGIN_REQUEST]   = &ChatServer::login;
     this->callbacks[commands::LOGOUT_REQUEST]  = &ChatServer::logout;
@@ -44,12 +44,12 @@ ChatServer::~ChatServer() {
     std::cout << "Server stopped" << std::endl;
 }
 
-void ChatServer::login(json::Value data, ClientID id) {
+void ChatServer::login(json::Var data, net::ClientID id) {
     // seek id
     auto node = this->users.find(id);
     if (node != this->users.end()) {
         // loggin failed (user already logged in)
-        json::Value answer;
+        json::Var answer;
         answer["command"] = commands::LOGIN_RESPONSE;
         answer["success"] = false;
         this->push(answer, id);
@@ -59,7 +59,7 @@ void ChatServer::login(json::Value data, ClientID id) {
     // add user
     this->users[id] = username;
     // loggin successful
-    json::Value answer;
+    json::Var answer;
     answer["command"] = commands::LOGIN_RESPONSE;
     answer["success"] = true;
     answer["id"] = id;
@@ -69,7 +69,7 @@ void ChatServer::login(json::Value data, ClientID id) {
     while (node != this->users.end()) {
         if (node->first != id) {
             // send all user ids & names to this client
-            json::Value answer;
+            json::Var answer;
             answer["command"] = commands::USERLIST_UPDATE;
             answer["add"] = true;
             answer["id"] = node->first;
@@ -84,7 +84,7 @@ void ChatServer::login(json::Value data, ClientID id) {
     }
 }
 
-void ChatServer::message(json::Value data, ClientID id) {
+void ChatServer::message(json::Var data, net::ClientID id) {
     std::string text = data["text"].getString();
     // seek id
     auto node = this->users.find(id);
@@ -97,7 +97,7 @@ void ChatServer::message(json::Value data, ClientID id) {
     // broadcast message to clients
     node = this->users.begin();
     while (node != this->users.end()) {
-        json::Value answer;
+        json::Var answer;
         answer["command"] = commands::MESSAGE_RESPONSE;
         answer["text"] = text;
         answer["id"] = id;
@@ -106,7 +106,7 @@ void ChatServer::message(json::Value data, ClientID id) {
     }
 }
 
-void ChatServer::logout(json::Value data, ClientID id) {
+void ChatServer::logout(json::Var data, net::ClientID id) {
     // seek id
     auto node = this->users.find(id);
     if (node == this->users.end()) {
@@ -116,7 +116,7 @@ void ChatServer::logout(json::Value data, ClientID id) {
     std::string username = node->second;
     this->users.erase(node);
     // logout successful
-    json::Value answer;
+    json::Var answer;
     answer["command"] = commands::LOGOUT_RESPONSE;
     answer["id"] = id;
     this->push(answer, id);
@@ -124,7 +124,7 @@ void ChatServer::logout(json::Value data, ClientID id) {
     while (node != this->users.end()) {
         if (node->first != id) {
             // send this new user to all other clients
-            json::Value answer;
+            json::Var answer;
             answer["command"] = commands::USERLIST_UPDATE;
             answer["add"] = false;
             answer["id"] = id;
@@ -133,5 +133,11 @@ void ChatServer::logout(json::Value data, ClientID id) {
         }
         node++;
     }
+}
+
+void ChatServer::request_logout() {
+    json::Var request;
+    request["command"] = commands::LOGOUT_REQUEST;
+    this->push(request);
 }
 

@@ -26,20 +26,18 @@ SOFTWARE.
 */
 
 #pragma once
-#ifndef SERVER_INCLUDE_GUARD
-#define SERVER_INCLUDE_GUARD
+#ifndef NET_SERVER_INCLUDE_GUARD
+#define NET_SERVER_INCLUDE_GUARD
 
 #include <set>
 #include <map>
 #include <cstdint>
 
-#include "../tcp.hpp"
-#include "../json.hpp"
-#include "../utils.hpp"
-
+#include "link.hpp"
+#include "json.hpp"
 #include "common.hpp"
 
-namespace networking {
+namespace net {
 
     template <typename Derived> class Server;
 
@@ -59,7 +57,7 @@ namespace networking {
             /// related server
             Derived* server;
             /// TCP link to the client
-            Link* link;
+            tcp::Link* link;
 
             /// Disconnects the worker
             virtual inline void disconnect() {
@@ -73,7 +71,7 @@ namespace networking {
              *  given TCP link. It will automatically retrieve the next valid
              *  client ID and start the necessary Threads
              */
-            Worker(Derived* server, Link* link) {
+            Worker(Derived* server, tcp::Link* link) {
                 // create worker
                 server->workers_mutex.lock();
                 this->id     = server->next_id++;
@@ -83,7 +81,7 @@ namespace networking {
                 server->workers[this->id] = this;
                 server->workers_mutex.unlock();
                 // set client id to client
-                json::Value welcome;
+                json::Var welcome;
                 welcome["id"] = this->id;
                 std::string dump = welcome.dump();
                 this->link->write(dump);
@@ -124,7 +122,7 @@ namespace networking {
 
         protected:
             /// Listener for accepting clients
-            Listener listener;
+            tcp::Listener listener;
             /// Thread for accepting-loop
             std::thread accepter;
             /// Thread for sending-loop
@@ -144,9 +142,9 @@ namespace networking {
             /// Mutex for ips
             std::mutex ips_mutex;
             /// Queue of incomming objects
-            JsonQueue in;
+            utils::SyncQueue<json::Var> in;
             /// Queue of outgoing objects
-            JsonQueue out;
+            utils::SyncQueue<json::Var> out;
 
             /// Accepter-loop
             void accept_loop() {
@@ -157,12 +155,12 @@ namespace networking {
                         bool full = (this->next_id == this->max_clients);
                         this->workers_mutex.unlock();
                         if (full) {
-                            delay(1000);
+                            utils::delay(1000);
                             continue;
                         }
                     }
                     // try fetch next connection
-                    Link* next_link = this->listener.accept();
+                    tcp::Link* next_link = this->listener.accept();
                     if (next_link != NULL) {
                         std::string ip = next_link->host->ip();
                         this->ips_mutex.lock();
@@ -178,7 +176,7 @@ namespace networking {
                             new Worker<Derived>(ptr, next_link);
                         }
                     } else {
-                        delay(25);
+                        utils::delay(25);
                     }
                 }
             }
@@ -187,9 +185,9 @@ namespace networking {
             void send_loop() {
                 while (this->isOnline()) {
                     // Wait for Next JSON Object
-                    json::Value obj = this->out.pop();
+                    json::Var obj = this->out.pop();
                     while (obj.isNull()) {
-                        delay(25);
+                        utils::delay(25);
                         if (!this->isOnline()) {
                             // Quit Loop if Offline
                             return;
@@ -203,7 +201,7 @@ namespace networking {
                     bool found = (node != this->workers.end());
                     this->workers_mutex.unlock();
                     if (found) {
-                        Link* link = node->second->link;
+                        tcp::Link* link = node->second->link;
                         if (link->isOnline()) {
                             // Serialize Object
                             std::string dump = obj.dump();
@@ -233,7 +231,7 @@ namespace networking {
                     this->workers_mutex.unlock();
                     // Iterate Through Workers
                     for (auto node = workers.begin(); node != workers.end(); node++) {
-                        Link* link = node->second->link;
+                        tcp::Link* link = node->second->link;
                         if (link->isOnline()) {
                             while (link->isReady()) {
                         std::string dump;
@@ -248,34 +246,34 @@ namespace networking {
                             continue;
                         }
                         // Deserialize Event
-                        json::Value object;
+                        json::Var object;
                         object.load(dump);
                         // Wrap Object with ClientID as Source
-                        json::Value wrap;
+                        json::Var wrap;
                         wrap["source"] = node->first;
                         wrap["payload"] = object;
                         this->in.push(wrap);
                             }
                         }
                     }
-                    delay(25);
+                    utils::delay(25);
                 }
             }
 
             /// Command-Callback Mapper
-            std::map<CommandID, void (Derived::*)(json::Value, ClientID)> callbacks;
+            std::map<CommandID, void (Derived::*)(json::Var, ClientID)> callbacks;
 
             /// Handle-loop
             void handle_loop() {
                 while (this->isOnline()) {
                     // wait for next object
-                    json::Value object = this->pop();
+                    json::Var object = this->pop();
                     if (object.isNull()) {
                         // Null-Object
-                        networking::delay(15);
+                        utils::delay(15);
                     } else {
                         ClientID source = object["source"].getInteger();
-                        json::Value payload = object["payload"];
+                        json::Var payload = object["payload"];
                         CommandID command_id = payload["command"].getInteger();
                         // Search callback
                         auto entry = this->callbacks.find(command_id);
@@ -420,7 +418,7 @@ namespace networking {
              *  delete the bundle after handling it.
              *  @return pointer to the next bundle
              */
-            inline json::Value pop() {
+            inline json::Var pop() {
                 return this->in.pop();
             }
 
@@ -435,8 +433,8 @@ namespace networking {
              *  @param event: event-pointer
              *  @param id: destination's client ID
              */
-            inline void push(json::Value object, ClientID id) {
-                json::Value wrap;
+            inline void push(json::Var object, ClientID id) {
+                json::Var wrap;
                 wrap["source"] = id;
                 wrap["payload"] = object;
                 this->out.push(wrap);
@@ -452,7 +450,7 @@ namespace networking {
              *  of this method. The copies are automatically after sending.
              *  @param event: event-pointer
              */
-            void push(json::Value object) {
+            void push(json::Var object) {
                 this->workers_mutex.lock();
                 auto workers = this->workers;
                 this->workers_mutex.unlock();
