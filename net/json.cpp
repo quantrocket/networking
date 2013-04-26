@@ -29,7 +29,7 @@ SOFTWARE.
 
 namespace json {
 
-    std::string type2string(Type type) {
+    std::string type2string(Type const type) {
         switch (type) {
             case UNDEFINED:
                 return "undefined";
@@ -56,7 +56,7 @@ namespace json {
         return "unknown";
     }
 
-    std::string trim(const std::string& str) {
+    std::string trim(std::string const & str) {
         std::string out = "";
         bool opened_string = false;
         for (std::size_t i = 0; i < str.size(); i++) {
@@ -83,7 +83,7 @@ namespace json {
     }
 
     // split text for token and ignore token's inside string, array or object
-    std::vector<std::string> split(const std::string& text, char token) {
+    std::vector<std::string> split(std::string const & text, char const token) {
         std::vector<std::string> result;
         std::size_t i = 0;
         std::size_t last = 0;
@@ -174,7 +174,7 @@ namespace json {
         }
     }
 
-    std::string Var::dumpArray(long indent) {
+    std::string Var::dumpArray(long const indent) {
         std::string dump = "";
         dump += '[';
         if (indent > -1) {
@@ -206,7 +206,7 @@ namespace json {
         return dump;
     }
 
-    std::string Var::dumpObject(long indent) {
+    std::string Var::dumpObject(long const indent) {
         std::string dump = "";
         dump += '{';
         if (indent > -1) {
@@ -241,7 +241,7 @@ namespace json {
         return dump;
     }
 
-    void Var::parseArray(const std::string& dump) {
+    void Var::parseArray(std::string const & dump) {
         std::vector<std::string> parts = split(dump, ',');
         Array result;
         // iterate all values
@@ -255,7 +255,7 @@ namespace json {
         this->array = result;
     }
 
-    void Var::parseObject(const std::string& dump) {
+    void Var::parseObject(std::string const & dump) {
         std::vector<std::string> parts = split(dump, ',');
         Object result;
         // iterate all pairs
@@ -279,68 +279,68 @@ namespace json {
         : type(UNDEFINED) {
     }
 
-    Var::Var(char c)
+    Var::Var(char const c)
          : type(STRING)
          , string("") {
          this->string += c;
     }
 
-    Var::Var(const char* string)
+    Var::Var(char const * string)
             : type(STRING)
             , string(string) {
     }
 
-    Var::Var(const std::string& string)
+    Var::Var(std::string const & string)
         : type(STRING)
         , string(string) {
     }
 
-    Var::Var(short integer)
+    Var::Var(short const integer)
         : type(INTEGER)
         , integer(integer) {
     }
 
-    Var::Var(unsigned short integer)
+    Var::Var(unsigned short const integer)
         : type(INTEGER)
         , integer(integer) {
     }
 
-    Var::Var(int integer)
+    Var::Var(int const integer)
          : type(INTEGER)
          , integer(integer) {
     }
 
-    Var::Var(unsigned int integer)
+    Var::Var(unsigned int const integer)
          : type(INTEGER)
          , integer(integer) {
     }
 
-    Var::Var(long integer)
+    Var::Var(long const integer)
          : type(INTEGER)
          , integer(integer) {
     }
 
-    Var::Var(unsigned long integer)
+    Var::Var(unsigned long const integer)
          : type(INTEGER)
          , integer(integer) {
     }
 
-    Var::Var(float floating)
+    Var::Var(float const floating)
         : type(FLOAT)
         , floating(floating) {
     }
 
-    Var::Var(bool boolean)
+    Var::Var(bool const boolean)
         : type(BOOLEAN)
         , boolean(boolean) {
     }
 
-    Var::Var(Array array)
+    Var::Var(Array const array)
         : type(ARRAY)
         , array(array) {
     }
 
-    Var::Var(Object object)
+    Var::Var(Object const object)
         : type(OBJECT)
         , object(object) {
     }
@@ -368,8 +368,8 @@ namespace json {
     }
 
     std::string Var::getString() {
-    if (this->type == STRING) {
-        return this->string;
+        if (this->type == STRING) {
+            return this->string;
         }
         throw TypeError(STRING, this->type);
     }
@@ -408,7 +408,7 @@ namespace json {
         throw TypeError(OBJECT, this->type);
     }
 
-    bool Var::operator==(const Var& other) {
+    bool Var::operator==(Var const & other) {
         if (this->type == other.type) {
             switch (this->type) {
                 case UNDEFINED:
@@ -462,11 +462,11 @@ namespace json {
         return false;
     }
 
-    bool Var::operator!=(const Var& other) {
+    bool Var::operator!=(Var const & other) {
         return !(*this == other);
     }
 
-    Var& Var::operator=(const Var& other) {
+    Var& Var::operator=(Var const & other) {
         if (*this != other) {
             // reset all values
             this->string   = "";
@@ -504,22 +504,22 @@ namespace json {
         return *this;
     }
 
-    Var& Var::operator[](const std::string& key) {
+    Var & Var::operator[](std::string const & key) {
         this->type = OBJECT;
         return this->object[key];
     }
 
-    Var& Var::operator[](const long& index) {
+    Var& Var::operator[](std::size_t const & index) {
         this->type = ARRAY;
         return this->array[index];
     }
 
-    void Var::append(Var value) {
+    void Var::append(Var const value) {
         this->type = ARRAY;
         this->array.push_back(value);
     }
 
-    void Var::load(const std::string& str, bool trim_it) {
+    void Var::load(std::string const & str, bool const trim_it) {
         // trim spaces, tabulators and newlines
         std::string dump = str;
         if (trim_it) {
@@ -567,7 +567,7 @@ namespace json {
         }
     }
 
-    std::string Var::dump(long indent) {
+    std::string Var::dump(long const indent) {
         switch (this->type) {
             case UNDEFINED:
                 return "null";

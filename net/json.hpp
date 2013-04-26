@@ -59,53 +59,43 @@ namespace json {
     typedef std::vector<Var> Array;
     typedef std::map<std::string, Var> Object;
 
-    std::string type2string(Type type);
+    std::string type2string(Type const type);
 
-    std::string trim(const std::string& str);
+    std::string trim(std::string const & str);
 
     // split text for token and ignore token's inside string, array or object
-    std::vector<std::string> split(const std::string& text, char token);
+    std::vector<std::string> split(std::string const & text, char const token);
 
     class ParseError: public std::exception {
-
         protected:
             std::string msg;
-
         public:
-            ParseError(const std::string& msg) throw() {
+            ParseError(std::string const & msg) throw() {
                 this->msg = "ParseError: '" + msg + "' does not contain"
                            + " valid JSON-styled information";
                 std::cerr << "JSON error occured: "
                           << this->msg << std::endl;
             }
-
             virtual ~ParseError() throw() {}
-
             virtual const char* what() const throw() {
                 return this->msg.c_str();
             }
-
     };
 
     class TypeError: public std::exception {
-
         protected:
             std::string msg;
-
         public:
-            TypeError(Type type, Type wrong) throw() {
+            TypeError(Type const type, Type const wrong) throw() {
                 this->msg = "TypeError: " + type2string(type) + " cannot be"
                            +" access as if " + type2string(wrong);
                 std::cerr << "JSON error occured: "
                           << this->msg << std::endl;
             }
-
             virtual ~TypeError() throw() {}
-
             virtual const char* what() const throw() {
                 return this->msg.c_str();
             }
-
     };
 
     class Var {
@@ -123,89 +113,89 @@ namespace json {
             std::string dumpInteger();
             std::string dumpFloat();
             std::string dumpBoolean();
-            std::string dumpArray(long indent);
-            std::string dumpObject(long indent);
-            void parseArray(const std::string& dump);
-            void parseObject(const std::string& dump);
+            std::string dumpArray(long const indent);
+            std::string dumpObject(long const indent);
+            void parseArray(std::string const & dump);
+            void parseObject(std::string const & dump);
 
         public:
             Var();
-            Var(char c);
-            Var(const char* string);
-            Var(const std::string& string);
-            Var(short integer);
-            Var(unsigned short integer);
-            Var(int integer);
-            Var(unsigned int integer);
-            Var(long integer);
-            Var(unsigned long integer);
-            Var(float floating);
-            Var(bool boolean);
-            Var(Array array);
-            Var(Object object);
+            Var(char const c);
+            Var(char const* string);
+            Var(std::string const & string);
+            Var(short const integer);
+            Var(unsigned short const integer);
+            Var(int const integer);
+            Var(unsigned int const integer);
+            Var(long const integer);
+            Var(unsigned long const integer);
+            Var(float const floating);
+            Var(bool const boolean);
+            Var(Array const array);
+            Var(Object const object);
 
-            inline Var& operator=(char c) {
+            inline Var& operator=(char const c) {
                 this->type = STRING;
                 this->string = "";
                 this->string += c;
                 return *this;
             }
-            inline Var& operator=(const char* string) {
+            inline Var& operator=(char const * string) {
                 this->type = STRING;
                 this->string = std::string(string);
                 return *this;
             }
-            inline Var& operator=(const std::string& string) {
+            inline Var& operator=(std::string const & string) {
                 this->type = STRING;
                 this->string = string;
                 return *this;
             }
-            inline Var& operator=(short integer) {
+            inline Var& operator=(short const integer) {
                 this->type = INTEGER;
                 this->integer = integer;
                 return *this;
             }
-            inline Var& operator=(unsigned short integer) {
+            inline Var& operator=(unsigned short const integer) {
                 this->type = INTEGER;
                 this->integer = integer;
                 return *this;
             }
-            inline Var& operator=(int integer) {
+            inline Var& operator=(int const integer) {
                 this->type = INTEGER;
                 this->integer = integer;
                 return *this;
             }
-            inline Var& operator=(unsigned int integer) {
+            inline Var& operator=(unsigned int const integer) {
                 this->type = INTEGER;
                 this->integer = integer;
                 return *this;
             }
-            inline Var& operator=(long integer) {
+            inline Var& operator=(long const integer) {
                 this->type = INTEGER;
                 this->integer = integer;
                 return *this;
             }
-            inline Var& operator=(unsigned long integer) {
+            inline Var& operator=(unsigned long const integer) {
                 this->type = INTEGER;
                 this->integer = integer;
                 return *this;
             }
-            inline Var& operator=(float floating) {
+            inline Var& operator=(float const floating) {
                 this->type = FLOAT;
                 this->floating = floating;
                 return *this;
             }
-            inline Var& operator=(bool boolean) {
+            inline Var& operator=(bool const boolean) {
                 this->type = BOOLEAN;
                 this->boolean = boolean;
                 return *this;
             }
-            inline Var& operator=(Array array) {
+            inline Var& operator=(Array const array) {
                 this->type = ARRAY;
                 this->array = array;
                 return *this;
             }
-            inline Var& operator=(Object object) {
+            inline Var& operator=(Object const object) {
                 this->type = OBJECT;
                 this->object = object;
                 return *this;
@@ -226,16 +216,16 @@ namespace json {
             Array getArray();
             Object getObject();
 
-            bool operator==(const Var& other);
-            bool operator!=(const Var& other);
-            Var& operator=(const Var& other);
-            Var& operator[](const std::string& key);
-            Var& operator[](const long& index);
+            bool operator==(Var const & other);
+            bool operator!=(Var const & other);
+            Var& operator=(Var const & other);
+            Var& operator[](std::string const & key);
+            Var& operator[](std::size_t const & index);
 
-            void append(Var value);
+            void append(Var const value);
 
-            void load(const std::string& str, bool trim_it=true);
-            std::string dump(long indent=-1);
+            void load(std::string const & str, bool const trim_it=true);
+            std::string dump(long const indent=-1);
     };
 
 }

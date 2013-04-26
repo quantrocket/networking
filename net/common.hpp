@@ -49,7 +49,7 @@ namespace net {
          * This function wraps C++11-functionallity for delays.
          *  @param ms   Amount of milliseconds to wait
          */
-        inline void delay(unsigned short ms) {
+        inline void delay(unsigned short const ms) {
             std::this_thread::sleep_for(std::chrono::milliseconds(ms));
         }
 
@@ -85,7 +85,7 @@ namespace net {
                  * This pushs a given object to the queue.
                  *  @param data: object
                  */
-                inline void push(Data data) {
+                inline void push(Data const & data) {
                     this->mutex.lock();
                     this->data.push(data);
                     this->mutex.unlock();

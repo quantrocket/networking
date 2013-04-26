@@ -55,13 +55,13 @@ namespace net {
             /// client ID
             ClientID id;
             /// related server
-            Derived* server;
+            Derived& server;
             /// TCP link to the client
-            tcp::Link* link;
+            tcp::Link& link;
 
             /// Disconnects the worker
             virtual inline void disconnect() {
-                this->server->disconnect(this->id);
+                this->server.disconnect(this->id);
             }
 
         public:
@@ -71,20 +71,24 @@ namespace net {
              *  given TCP link. It will automatically retrieve the next valid
              *  client ID and start the necessary Threads
              */
-            Worker(Derived* server, tcp::Link* link) {
+            Worker(Derived & server, tcp::Link & link)
+                : server(server)
+                , link(link) {
                 // create worker
-                server->workers_mutex.lock();
-                this->id     = server->next_id++;
+                server.workers_mutex.lock();
+                this->id     = server.next_id++;
+                /*
                 this->server = server;
                 this->link   = link;
+                */
                 // add to server
-                server->workers[this->id] = this;
-                server->workers_mutex.unlock();
+                server.workers[this->id] = this;
+                server.workers_mutex.unlock();
                 // set client id to client
                 json::Var welcome;
                 welcome["id"] = this->id;
                 std::string dump = welcome.dump();
-                this->link->write(dump);
+                this->link.write(dump);
             }
 
             /// Destructor
@@ -93,7 +97,7 @@ namespace net {
              *  the outgoing queue.
              */
             virtual ~Worker() {
-                this->link->close();
+                this->link.close();
             }
 
             /// Returns whether the worker is online
@@ -102,7 +106,7 @@ namespace net {
              *  @return true if online
              */
             virtual inline bool isOnline() {
-                return this->link->isOnline();
+                return this->link.isOnline();
             }
 
     };
@@ -162,7 +166,7 @@ namespace net {
                     // try fetch next connection
                     tcp::Link* next_link = this->listener.accept();
                     if (next_link != NULL) {
-                        std::string ip = next_link->host->ip();
+                        std::string ip = next_link->host.ip();
                         this->ips_mutex.lock();
                         bool blocked = (this->ips.find(ip) != this->ips.end());
                         this->ips_mutex.unlock();
@@ -172,8 +176,8 @@ namespace net {
                             std::cerr << "Worker from " << ip << " is blocked"
                               << std::endl;
                         } else {
-                            Derived* ptr = static_cast<Derived*>(this);
-                            new Worker<Derived>(ptr, next_link);
+                            Derived& obj = static_cast<Derived&>(*this);
+                            new Worker<Derived>(obj, *next_link);
                         }
                     } else {
                         utils::delay(25);
@@ -201,23 +205,23 @@ namespace net {
                     bool found = (node != this->workers.end());
                     this->workers_mutex.unlock();
                     if (found) {
-                        tcp::Link* link = node->second->link;
-                        if (link->isOnline()) {
+                        tcp::Link& link = node->second->link;
+                        if (link.isOnline()) {
                             // Serialize Object
                             std::string dump = obj.dump();
                             // Send to Client
                             try {
-                                link->write(dump);
+                                link.write(dump);
                             } catch (const BrokenPipe& bp) {
                                 std::cerr << "Connection to Worker #"
                                           << node->first << " was lost"
                                           << std::endl;
-                                link->close();
+                                link.close();
                             }
                         }
                     } else {
                         std::cerr << "Worker #" << id << " not found"
-                          << std::endl;
+                                  << std::endl;
                     }
                 }
             }
@@ -231,28 +235,28 @@ namespace net {
                     this->workers_mutex.unlock();
                     // Iterate Through Workers
                     for (auto node = workers.begin(); node != workers.end(); node++) {
-                        tcp::Link* link = node->second->link;
-                        if (link->isOnline()) {
-                            while (link->isReady()) {
-                        std::string dump;
-                        // Read Dumped Event
-                        try {
-                            dump = link->read();
-                        } catch (const BrokenPipe& bp) {
-                            link->close();
-                            std::cerr << "Connection to Worker #"
-                                      << node->first << " was lost"
-                                      << std::endl;
-                            continue;
-                        }
-                        // Deserialize Event
-                        json::Var object;
-                        object.load(dump);
-                        // Wrap Object with ClientID as Source
-                        json::Var wrap;
-                        wrap["source"] = node->first;
-                        wrap["payload"] = object;
-                        this->in.push(wrap);
+                        tcp::Link& link = node->second->link;
+                        if (link.isOnline()) {
+                            while (link.isReady()) {
+                                std::string dump;
+                                // Read Dumped Event
+                                try {
+                                    dump = link.read();
+                                } catch (const BrokenPipe& bp) {
+                                    link.close();
+                                    std::cerr << "Connection to Worker #"
+                                              << node->first << " was lost"
+                                              << std::endl;
+                                    continue;
+                                }
+                                // Deserialize Event
+                                json::Var object;
+                                object.load(dump);
+                                // Wrap Object with ClientID as Source
+                                json::Var wrap;
+                                wrap["source"] = node->first;
+                                wrap["payload"] = object;
+                                this->in.push(wrap);
                             }
                         }
                     }
@@ -261,7 +265,7 @@ namespace net {
             }
 
             /// Command-Callback Mapper
-            std::map<CommandID, void (Derived::*)(json::Var, ClientID)> callbacks;
+            std::map<CommandID, void (Derived::*)(json::Var &, ClientID const)> callbacks;
 
             /// Handle-loop
             void handle_loop() {
@@ -299,7 +303,7 @@ namespace net {
              * Create a new server with a maximum number of clients (or -1 for
              *  an undefined maximum).
              */
-            Server(std::int16_t max_clients=-1)
+            Server(std::int16_t const max_clients=-1)
                 : max_clients(max_clients)
                 , next_id(0) {
             }
@@ -318,17 +322,17 @@ namespace net {
              *  It will start the accepter-loop as a Thread.
              *  @param port: local port number
              */
-            void start(std::uint16_t port) {
+            void start(std::uint16_t const port) {
                 if (this->isOnline()) {
                     return;
                 }
                 // start listener
                 this->listener.open(port);
                 this->accepter = std::thread(&Server::accept_loop, this);
-                this->sender = std::thread(&Server::send_loop, this);
-                this->receiver = std::thread(&Server::recv_loop, this);
+                this->sender   = std::thread(&Server::send_loop,   this);
+                this->receiver = std::thread(&Server::recv_loop,   this);
                 // start handler
-                this->handler = std::thread(&Server::handle_loop, this);
+                this->handler  = std::thread(&Server::handle_loop, this);
             }
 
             /// Returns whether the server is online
@@ -373,7 +377,7 @@ namespace net {
              *  from the server.
              *  @param id: client ID of the worker
              */
-            void disconnect(ClientID id) {
+            void disconnect(ClientID const id) {
                 this->workers_mutex.lock();
                 auto node = this->workers.find(id);
                 if (node != this->workers.end()) {
@@ -389,7 +393,7 @@ namespace net {
              * This will add the given IP-address to the blocking list
              *  @param ip: IP-address or hostname
              */
-            inline void block(const std::string& ip) {
+            inline void block(std::string const & ip) {
                 this->ips_mutex.lock();
                 this->ips.insert(ip);
                 this->ips_mutex.unlock();
@@ -433,7 +437,7 @@ namespace net {
              *  @param event: event-pointer
              *  @param id: destination's client ID
              */
-            inline void push(json::Var object, ClientID id) {
+            inline void push(json::Var const & object, ClientID const id) {
                 json::Var wrap;
                 wrap["source"] = id;
                 wrap["payload"] = object;
@@ -450,7 +454,7 @@ namespace net {
              *  of this method. The copies are automatically after sending.
              *  @param event: event-pointer
              */
-            void push(json::Var object) {
+            void push(json::Var const & object) {
                 this->workers_mutex.lock();
                 auto workers = this->workers;
                 this->workers_mutex.unlock();

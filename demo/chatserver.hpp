@@ -36,19 +36,18 @@ SOFTWARE.
 class ChatServer;
 
 class ChatServer: public net::Server<ChatServer> {
-    friend void server_handler(ChatServer* server);
 
     protected:
         std::map<net::ClientID, std::string> users;
 
-        void login(json::Var data, net::ClientID id);
-        void message(json::Var data, net::ClientID id);
-        void logout(json::Var data, net::ClientID id);
+        void login(json::Var & data, net::ClientID const id);
+        void message(json::Var & data, net::ClientID const id);
+        void logout(json::Var & data, net::ClientID const id);
 
     public:
-        ChatServer(std::uint16_t port);
+        ChatServer(std::uint16_t const port);
         virtual ~ChatServer();
-        
+
         void request_logout();
 
 };

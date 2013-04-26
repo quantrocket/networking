@@ -46,7 +46,7 @@ namespace net {
             std::string msg;
 
         public:
-            NetworkError(const std::string& msg) throw() {
+            NetworkError(std::string const & msg) throw() {
                 this->msg = msg;
                 std::cerr << "Networking error occured: "
                           << this->msg << std::endl;
@@ -88,7 +88,14 @@ namespace net {
      */
     struct Host {
         /// ip-address structure (from SDL_net)
-        IPaddress* addr;
+        IPaddress addr;
+
+        /// Constructor for undefined Host
+        /**
+         * This initializes the host with blank data.
+         */
+        Host() {
+        }
 
         /// Constructor resolving host and port
         /**
@@ -97,9 +104,8 @@ namespace net {
          *  @param host: remote hostname
          *  @param post: remote port number
          */
-        Host(const std::string& host, std::uint16_t port)
-            : addr(new IPaddress()) {
-            if (SDLNet_ResolveHost(this->addr, host.c_str(), port) == -1) {
+        Host(std::string const & host, std::uint16_t const port) {
+            if (SDLNet_ResolveHost(&(this->addr), host.c_str(), port) == -1) {
                 throw NetworkError("SDLNet_ResolveHost: "
                                    + std::string(SDLNet_GetError()));
             }
@@ -110,9 +116,8 @@ namespace net {
          * This is used by servers to resolve a port on the local machine
          *  @param port: own port number
          */
-        Host(std::uint16_t port)
-            : addr(new IPaddress()) {
-            if (SDLNet_ResolveHost(this->addr, NULL, port) == -1) {
+        Host(std::uint16_t const port) {
+            if (SDLNet_ResolveHost(&(this->addr), NULL, port) == -1) {
                 throw NetworkError("SDLNet_ResolveHost: "
                                    + std::string(SDLNet_GetError()));
             }
@@ -123,17 +128,18 @@ namespace net {
          * Creates an exact copy of the given IPaddress object.
          *  @param addr: ip address object to copy
          */
-        Host(IPaddress* addr)
-            : addr(new IPaddress()) {
-            this->addr->host = addr->host;
-            this->addr->port = addr->port;
+        Host(IPaddress const * addr) {
+            this->addr.host = addr->host;
+            this->addr.port = addr->port;
         }
 
         /// Destructor
         ~Host() {
+            /*
             if (this->addr != NULL) {
                 delete this->addr;
             }
+            */
         }
 
         /// Get IP-address or hostname
@@ -142,7 +148,7 @@ namespace net {
          *  @return IP-adress or hostname as string
          */
         inline std::string ip() {
-            Uint32 number = SDLNet_Read32(&(this->addr->host));
+            Uint32 number = SDLNet_Read32(&(this->addr.host));
             int a, b, c, d;
             a = (number & 0xFF000000) >> 24;
             b = (number & 0x00FF0000) >> 16;
@@ -158,7 +164,7 @@ namespace net {
          *  @param port number
          */
         inline std::uint16_t port() {
-            return SDLNet_Read16(&(this->addr->port));
+            return SDLNet_Read16(&(this->addr.port));
         }
 
     };
@@ -187,8 +193,7 @@ namespace net {
                 Link()
                     : set(SDLNet_AllocSocketSet(1))
                     , socket(NULL)
-                    , online(false)
-                    , host(NULL) {
+                    , online(false) {
                 }
 
                 /// Constructor for an online, given link
@@ -196,17 +201,16 @@ namespace net {
                  * Creates the link from a given TCP-socket.
                  *  @param socket: TCP-socket to use
                  */
-                Link(TCPsocket socket)
+                Link(TCPsocket const socket)
                     : set(SDLNet_AllocSocketSet(1))
                     , socket(socket)
-                    , online(true)
-                    , host(NULL) {
+                    , online(true) {
                     if (SDLNet_TCP_AddSocket(this->set, this->socket) == -1) {
                         SDLNet_FreeSocketSet(this->set);
                         throw NetworkError("SDLNet_TCP_AddSocket: "
                                            + std::string(SDLNet_GetError()));
                     }
-                    this->host = new Host(SDLNet_TCP_GetPeerAddress(socket));
+                    this->host = Host(SDLNet_TCP_GetPeerAddress(socket));
                 }
 
                 /// Destructor
@@ -224,12 +228,12 @@ namespace net {
                  *  @param host: remote hostname
                  *  @param port: remote port number
                  */
-                void open(const std::string& host, std::uint16_t port) {
+                void open(std::string const & host, std::uint16_t const port) {
                     if (this->socket != NULL) {
                         return;
                     }
-                    this->host = new Host(host, port);
-                    this->socket = SDLNet_TCP_Open(this->host->addr);
+                    this->host = Host(host, port);
+                    this->socket = SDLNet_TCP_Open(&(this->host.addr));
                     if (this->socket == NULL) {
                         throw NetworkError("SDLNet_TCP_Open: "
                                            + std::string(SDLNet_GetError()));
@@ -252,9 +256,9 @@ namespace net {
                     }
                     SDLNet_TCP_Close(this->socket);
                     this->socket = NULL;
-                    delete this->host;
+                    //delete this->host;
                     this->online = false;
-                    this->host = NULL;
+                    //this->host = NULL;
                 }
 
                 /// Returns whether the link is online or not
@@ -290,7 +294,7 @@ namespace net {
                  *  link to offline and throw a "BrokenPipe" exception.
                  *  @param data: String
                  */
-                void write(const std::string& s) {
+                void write(std::string const & s) {
                     if (this->socket == NULL) {
                         // tcp socket is not connected
                         this->online = false;
@@ -307,7 +311,7 @@ namespace net {
                     }
                     // send characters
                     bytes = sizeof(char) * size;
-                    const char* data = s.c_str();
+                    char const * data = s.c_str();
                     sent = SDLNet_TCP_Send(this->socket, data, bytes);
                     if (sent < (std::int32_t)bytes) {
                         // error while sending
@@ -360,7 +364,7 @@ namespace net {
                 }
 
                 /// Host data of the link
-                Host* host;
+                Host host;
 
         };
 
@@ -392,12 +396,12 @@ namespace net {
                  * This starts the server socket on a given local port.
                  *  @param port: local port number
                  */
-                void open(std::uint16_t port) {
+                void open(std::uint16_t const port) {
                     if (this->socket != NULL) {
                         return;
                     }
                     Host host(port);
-                    this->socket = SDLNet_TCP_Open(host.addr);
+                    this->socket = SDLNet_TCP_Open(&(host.addr));
                     if (this->socket == NULL) {
                         throw NetworkError("SDLNet_TCP_Open: "
                                            + std::string(SDLNet_GetError()));
@@ -444,7 +448,7 @@ namespace net {
                 }
 
         };
-    
+
     }
 
 }

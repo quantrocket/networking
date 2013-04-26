@@ -60,7 +60,7 @@ namespace net {
             utils::SyncQueue<json::Var> in;
 
             /// Command-Callback Mapper
-            std::map<CommandID, void (Derived::*)(json::Var)> callbacks;
+            std::map<CommandID, void (Derived::*)(json::Var &)> callbacks;
             /// Link to the server
             tcp::Link link;
             /// Client ID
@@ -156,7 +156,7 @@ namespace net {
              *  @param ip: IP-address or hostname of the remote server
              *  @param port: port number of the remove server
              */
-            void connect(const std::string& ip, std::uint16_t port) {
+            void connect(std::string const & ip, std::uint16_t const port) {
                 if (this->isOnline()) {
                     return;
                 }
@@ -217,7 +217,7 @@ namespace net {
              *  automatically deleted after sending to the server.
              *  @param event: event-pointer
              */
-            void push(json::Var data){
+            void push(json::Var const & data){
                 this->out.push(data);
             }
 

@@ -28,7 +28,7 @@ SOFTWARE.
 #include "chatserver.hpp"
 #include "commands.hpp"
 
-ChatServer::ChatServer(std::uint16_t port)
+ChatServer::ChatServer(const std::uint16_t port)
     : net::Server<ChatServer>() {
 
     this->callbacks[commands::LOGIN_REQUEST]   = &ChatServer::login;
@@ -44,7 +44,7 @@ ChatServer::~ChatServer() {
     std::cout << "Server stopped" << std::endl;
 }
 
-void ChatServer::login(json::Var data, net::ClientID id) {
+void ChatServer::login(json::Var & data, net::ClientID const id) {
     // seek id
     auto node = this->users.find(id);
     if (node != this->users.end()) {
@@ -84,7 +84,7 @@ void ChatServer::login(json::Var data, net::ClientID id) {
     }
 }
 
-void ChatServer::message(json::Var data, net::ClientID id) {
+void ChatServer::message(json::Var & data, net::ClientID const id) {
     std::string text = data["text"].getString();
     // seek id
     auto node = this->users.find(id);
@@ -106,7 +106,7 @@ void ChatServer::message(json::Var data, net::ClientID id) {
     }
 }
 
-void ChatServer::logout(json::Var data, net::ClientID id) {
+void ChatServer::logout(json::Var & data, net::ClientID const id) {
     // seek id
     auto node = this->users.find(id);
     if (node == this->users.end()) {

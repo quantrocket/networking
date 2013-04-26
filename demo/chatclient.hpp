@@ -36,26 +36,25 @@ SOFTWARE.
 class ChatClient;
 
 class ChatClient: public net::Client<ChatClient> {
-    friend void client_handler(ChatClient* client);
 
     protected:
         std::map<net::ClientID, std::string> users;
 
-        void login(json::Var data);
-        void message(json::Var data);
-        void logout(json::Var data);
-        void update(json::Var data);
+        void login(json::Var & data);
+        void message(json::Var & data);
+        void logout(json::Var & data);
+        void update(json::Var & data);
 
     public:
-        ChatClient(const std::string& ip, std::uint16_t port);
+        ChatClient(std::string const & ip, std::uint16_t const port);
         virtual ~ChatClient();
 
         bool authed;
         std::string username;
-        
-        void request_login(const std::string& username);
+
+        void request_login(std::string const & username);
         void request_logout();
-        void request_message(const std::string& message);
+        void request_message(std::string const & message);
 
 };
 
