@@ -114,6 +114,8 @@ namespace json {
                 }
             } else if (buffer == ']') {
                 if (inside.empty() || inside.top() == OPEN_OBJECT) {
+                    std::cerr << "Invalid Array close for Object" << std::endl
+                              << std::flush;
                     throw ParseError(text);
                 } else if (inside.top() == OPEN_STRING) {
                     // ']' belongs to string
@@ -123,6 +125,8 @@ namespace json {
                 }
             } else if (buffer == '}') {
                 if (inside.empty() || inside.top() == OPEN_ARRAY) {
+                    std::cerr << "Invalid Object close for Array" << std::endl
+                              << std::flush;
                     throw ParseError(text);
                 } else if (inside.top() == OPEN_STRING) {
                     // '}' belongs to string
@@ -262,7 +266,7 @@ namespace json {
         for (auto p = parts.begin(); p != parts.end(); p++) {
             std::vector<std::string> tmp = split(*p, ':');
             if (tmp.size() != 2) {
-                std::cout << tmp.size() << " != 2\n";
+                std::cerr << tmp.size() << " != 2" << std::endl << std::flush;
                 throw ParseError(*p);
             }
             // parse key and value
@@ -560,6 +564,10 @@ namespace json {
             if (dump.front() == '"' && dump.back() == '"') {
                 this->string = dump.substr(1, dump.size() - 2);
                 this->type = STRING;
+                return;
+            }
+            if (dump.size() == 0) {
+                // Empty set of data - Nothing to load
                 return;
             }
             // Parse Error
