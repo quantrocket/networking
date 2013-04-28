@@ -205,8 +205,13 @@ namespace net {
                         obj = this->out.pop();
                     }
                     // Get Worker's Link
+                    ClientID id;
+                    try {
+                        id = obj["source"].getInteger();
+                    } catch (json::TypeError const te) {
+                        continue;
+                    }
                     this->workers_mutex.lock();
-                    ClientID id = obj["source"].getInteger();
                     auto node = this->workers.find(id);
                     bool found = (node != this->workers.end());
                     this->workers_mutex.unlock();
@@ -279,9 +284,16 @@ namespace net {
                         // Null-Object
                         utils::delay(15);
                     } else {
-                        ClientID source = object["source"].getInteger();
-                        json::Var payload = object["payload"];
-                        CommandID command_id = payload["command"].getInteger();
+                        ClientID source;
+                        json::Var payload;
+                        CommandID command_id;
+                        try {
+                            source     = object["source"].getInteger();
+                            payload    = object["payload"];
+                            command_id = payload["command"].getInteger();
+                        } catch (json::TypeError const & te) {
+                            continue;
+                        }
                         // Search callback
                         auto entry = this->callbacks.find(command_id);
                         if (entry == this->callbacks.end()) {

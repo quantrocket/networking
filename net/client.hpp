@@ -119,7 +119,12 @@ namespace net {
                         utils::delay(15);
                     } else {
                         json::Var payload = object["payload"];
-                        CommandID command_id = payload["command"].getInteger();
+                        CommandID command_id;
+                        try {
+                            command_id = payload["command"].getInteger();
+                        } catch (json::TypeError & te) {
+                            continue;
+                        }
                         // Search callback
                         auto entry = this->callbacks.find(command_id);
                         if (entry == this->callbacks.end()) {
@@ -169,7 +174,11 @@ namespace net {
                 std::string dump = this->link.read();
                 json::Var welcome;
                 welcome.load(dump);
-                this->id = welcome["id"].getInteger();
+                try {
+                    this->id = welcome["id"].getInteger();
+                } catch (json::TypeError const & te) {
+                    throw std::runtime_error("Did not get ClientID by server");
+                }
                 // start threads
                 this->networker = std::thread(&Client::network_loop, this);
                 // start handler
