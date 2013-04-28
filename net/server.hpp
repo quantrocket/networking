@@ -480,7 +480,10 @@ namespace net {
                 this->workers_mutex.unlock();
                 for (auto node = workers.begin(); node != workers.end(); node++) {
                     if (node->second != NULL && node->second->isOnline()) {
-                        this->out.push(object);
+                        json::Var wrap;
+                        wrap["source"] = node->first;
+                        wrap["payload"] = object;
+                        this->out.push(wrap);
                     }
                 }
             }
