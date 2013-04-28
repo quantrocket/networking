@@ -60,24 +60,14 @@ namespace net {
             utils::SyncQueue<json::Var> in;
 
             /// Command-Callback Mapper
-            std::map<CommandID, void (Derived::*)(json::Var &)> callbacks;
+            std::map<CommandID, void (Derived::*)(json::Var&)> callbacks;
             /// Link to the server
             tcp::Link link;
             /// Client ID
             ClientID id;
 
-        public:
-            /// Constructor
-            Client() {
-            }
-
-            /// Destructor
-            /**
-             * Will disconnect from the server
-             */
-            virtual ~Client() {
-                this->disconnect();
-            }
+            /// Fallback Handle for undefined commands
+            virtual void fallback(json::Var& data) = 0;
 
             /// Sending-Receiving-loop
             void network_loop() {
@@ -133,8 +123,8 @@ namespace net {
                         // Search callback
                         auto entry = this->callbacks.find(command_id);
                         if (entry == this->callbacks.end()) {
-                            // Undefined callback
-                            std::cerr << "Undefined callback for: " << object.dump();
+                            // Use fallback handle
+                            this->fallback(payload);
                         } else {
                             // Exexcute callback
                             auto callback = entry->second;
@@ -143,6 +133,19 @@ namespace net {
                         }
                     }
                 }
+            }
+
+        public:
+            /// Constructor
+            Client() {
+            }
+
+            /// Destructor
+            /**
+             * Will disconnect from the server
+             */
+            virtual ~Client() {
+                this->disconnect();
             }
 
             /// Establish connection to the server at the given IP and port

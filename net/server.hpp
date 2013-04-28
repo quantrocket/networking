@@ -150,6 +150,12 @@ namespace net {
             /// Queue of outgoing objects
             utils::SyncQueue<json::Var> out;
 
+            /// Command-Callback Mapper
+            std::map<CommandID, void (Derived::*)(json::Var &, ClientID const)> callbacks;
+
+            /// Fallback Handle for undefined commands
+            virtual void fallback(json::Var& data, ClientID const id) = 0;
+
             /// Accepter-loop
             void accept_loop() {
                 while (this->isOnline()) {
@@ -264,9 +270,6 @@ namespace net {
                 }
             }
 
-            /// Command-Callback Mapper
-            std::map<CommandID, void (Derived::*)(json::Var &, ClientID const)> callbacks;
-
             /// Handle-loop
             void handle_loop() {
                 while (this->isOnline()) {
@@ -282,8 +285,8 @@ namespace net {
                         // Search callback
                         auto entry = this->callbacks.find(command_id);
                         if (entry == this->callbacks.end()) {
-                            // Undefined callback
-                            std::cerr << "Undefined callback for: " << object.dump();
+                            // Use fallback handle
+                            this->fallback(payload, source);
                         } else {
                             // Exexcute callback
                             auto callback = entry->second;

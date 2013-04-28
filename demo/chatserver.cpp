@@ -44,7 +44,7 @@ ChatServer::~ChatServer() {
     std::cout << "Server stopped" << std::endl;
 }
 
-void ChatServer::login(json::Var & data, net::ClientID const id) {
+void ChatServer::login(json::Var& data, net::ClientID const id) {
     // seek id
     auto node = this->users.find(id);
     if (node != this->users.end()) {
@@ -84,7 +84,7 @@ void ChatServer::login(json::Var & data, net::ClientID const id) {
     }
 }
 
-void ChatServer::message(json::Var & data, net::ClientID const id) {
+void ChatServer::message(json::Var& data, net::ClientID const id) {
     std::string text = data["text"].getString();
     // seek id
     auto node = this->users.find(id);
@@ -106,7 +106,7 @@ void ChatServer::message(json::Var & data, net::ClientID const id) {
     }
 }
 
-void ChatServer::logout(json::Var & data, net::ClientID const id) {
+void ChatServer::logout(json::Var& data, net::ClientID const id) {
     // seek id
     auto node = this->users.find(id);
     if (node == this->users.end()) {
@@ -133,6 +133,10 @@ void ChatServer::logout(json::Var & data, net::ClientID const id) {
         }
         node++;
     }
+}
+
+void ChatServer::fallback(json::Var& data, net::ClientID const id) {
+    std::cout << "Unknown case from #" << id << " : " << data.dump() << std::endl;
 }
 
 void ChatServer::request_logout() {

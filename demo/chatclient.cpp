@@ -45,7 +45,7 @@ ChatClient::~ChatClient() {
     this->link.close();
 }
 
-void ChatClient::login(json::Var & data) {
+void ChatClient::login(json::Var& data) {
     net::ClientID id = data["id"].getInteger();
     std::string username = data["username"].getString();
     bool success = data["success"].getBoolean();
@@ -60,7 +60,7 @@ void ChatClient::login(json::Var & data) {
     }
 }
 
-void ChatClient::message(json::Var & data) {
+void ChatClient::message(json::Var& data) {
     net::ClientID id = data["id"].getInteger();
     std::string text = data["text"].getString();
     if (this->authed) {
@@ -73,7 +73,7 @@ void ChatClient::message(json::Var & data) {
     }
 }
 
-void ChatClient::logout(json::Var & data) {
+void ChatClient::logout(json::Var& data) {
     net::ClientID id = data["id"].getInteger();
     if (this->authed && id == this->id) {
         std::cout << "You are leaving the chat." << std::endl;
@@ -84,7 +84,7 @@ void ChatClient::logout(json::Var & data) {
     }
 }
 
-void ChatClient::update(json::Var & data) {
+void ChatClient::update(json::Var& data) {
     bool add = data["add"].getBoolean();
     net::ClientID id = data["id"].getInteger();
     std::string username = data["username"].getString();
@@ -103,6 +103,10 @@ void ChatClient::update(json::Var & data) {
                   << std::endl;
         this->users.erase(node);
     }
+}
+
+void ChatClient::fallback(json::Var& data) {
+    std::cout << "Unknown case : " << data.dump() << std::endl;
 }
 
 void ChatClient::request_login(std::string const & username) {

@@ -40,10 +40,12 @@ class ChatClient: public net::Client<ChatClient> {
     protected:
         std::map<net::ClientID, std::string> users;
 
-        void login(json::Var & data);
-        void message(json::Var & data);
-        void logout(json::Var & data);
-        void update(json::Var & data);
+        void login(json::Var& data);
+        void message(json::Var& data);
+        void logout(json::Var& data);
+        void update(json::Var& data);
+
+        void fallback(json::Var& data);
 
     public:
         ChatClient(std::string const & ip, std::uint16_t const port);

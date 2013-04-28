@@ -40,9 +40,11 @@ class ChatServer: public net::Server<ChatServer> {
     protected:
         std::map<net::ClientID, std::string> users;
 
-        void login(json::Var & data, net::ClientID const id);
-        void message(json::Var & data, net::ClientID const id);
-        void logout(json::Var & data, net::ClientID const id);
+        void login(json::Var& data, net::ClientID const id);
+        void message(json::Var& data, net::ClientID const id);
+        void logout(json::Var& data, net::ClientID const id);
+
+        void fallback(json::Var& data, net::ClientID const id);
 
     public:
         ChatServer(std::uint16_t const port);
