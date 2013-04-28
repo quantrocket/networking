@@ -9,5 +9,4 @@ obj/*
 obj/Debug/*
 obj/Release/*
 networking.cbp
-networking.depend 
 networking.layout
