@@ -2,6 +2,7 @@
 chatroom
 *~
 net/*~
+net/doxygen.config
 demo/*~
 obj/*
 obj/Debug/*
