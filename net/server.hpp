@@ -366,6 +366,11 @@ namespace net {
              *  workers, stop their Threads and delete them from the server
              */
             void shutdown() {
+                // wait until outgoing queue is empty
+                // @note: data that is pushed while this queue is waiting might be lost
+                while (!this->out.isEmpty()) {
+                    utils::delay(15);
+                }
                 // shutdown listener
                 this->listener.close();
                 this->accepter.join();

@@ -150,6 +150,11 @@ namespace net {
              * Will disconnect from the server
              */
             virtual ~Client() {
+                /// wait until outgoing queue is empty
+                // @note: data that is pushed while this queue is waiting might be lost
+                while (!this->out.isEmpty()) {
+                    utils::delay(15);
+                }
                 this->disconnect();
             }
 
