@@ -19,6 +19,11 @@ Currently there is no UDP support. The server-client code is completly based on 
 
 Please pay attention to use `float` for floating point variables in the context of JSON Objects. Currenty `double` or `long double` are not supported, because some decimal place might be cut off when serializing with `std::to_string`.
 
+# Known Bugs
+===
+
+(1) Server shutdown: Shutdown the server before destroying the server object. Otherwise the handle_loop might try to access your (derived) server's method after the server was destroyed. Because the latest derived class instance is destroyed first, the basic server might be running in this case. It will be closed at last.
+
 # Example
 ===
 
