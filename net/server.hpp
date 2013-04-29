@@ -328,7 +328,9 @@ namespace net {
              * This will shutdown the server.
              */
             virtual ~Server() {
-                this->shutdown();
+                if (this->listener.isOnline()) {
+                    this->shutdown();
+                }
             }
 
             /// Start the server to listen on a given port
