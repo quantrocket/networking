@@ -55,7 +55,10 @@ void ChatServer::login(json::Var& data, net::ClientID const id) {
         this->push(answer, id);
         return;
     }
-    std::string username = data["username"].getString();
+    std::string username;
+    if (!data["username"].get(username)) {
+        return;
+    }
     // add user
     this->users[id] = username;
     // loggin successful
@@ -85,7 +88,10 @@ void ChatServer::login(json::Var& data, net::ClientID const id) {
 }
 
 void ChatServer::message(json::Var& data, net::ClientID const id) {
-    std::string text = data["text"].getString();
+    std::string text;
+    if (!data["text"].get(text)) {
+        return;
+    }
     // seek id
     auto node = this->users.find(id);
     if (node == this->users.end()) {

@@ -37,10 +37,10 @@ SOFTWARE.
 namespace net {
 
     /// Datatype for Command-IDs
-    typedef std::uint16_t CommandID;
+    typedef std::uint32_t CommandID;
 
     /// Type for client IDs (unsigned 16-bit integer with fixed size)
-    typedef std::uint16_t ClientID;
+    typedef std::uint32_t ClientID;
 
     namespace utils {
 
@@ -49,7 +49,7 @@ namespace net {
          * This function wraps C++11-functionallity for delays.
          *  @param ms   Amount of milliseconds to wait
          */
-        inline void delay(unsigned short const ms) {
+        inline void delay(std::uint16_t const ms) {
             std::this_thread::sleep_for(std::chrono::milliseconds(ms));
         }
 

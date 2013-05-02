@@ -46,9 +46,13 @@ ChatClient::~ChatClient() {
 }
 
 void ChatClient::login(json::Var& data) {
-    net::ClientID id = data["id"].getInteger();
-    std::string username = data["username"].getString();
-    bool success = data["success"].getBoolean();
+    net::ClientID id;
+    std::string username;
+    bool success;
+    if (!data["id"].get(id) || !data["username"].get(username)
+        || !data["success"].get(success)) {
+        return;
+    }
     if (!this->authed && id == this->id) {
         if (success) {
             this->username = username;
@@ -61,8 +65,11 @@ void ChatClient::login(json::Var& data) {
 }
 
 void ChatClient::message(json::Var& data) {
-    net::ClientID id = data["id"].getInteger();
-    std::string text = data["text"].getString();
+    net::ClientID id;
+    std::string text;
+    if (!data["id"].get(id) || !data["text"].get(text)) {
+        return;
+    }
     if (this->authed) {
         auto node = this->users.find(id);
         if (node == this->users.end()) {
@@ -74,7 +81,10 @@ void ChatClient::message(json::Var& data) {
 }
 
 void ChatClient::logout(json::Var& data) {
-    net::ClientID id = data["id"].getInteger();
+    net::ClientID id;
+    if (!data["id"].get(id)) {
+        return;
+    }
     if (this->authed && id == this->id) {
         std::cout << "You are leaving the chat." << std::endl;
         this->authed = false;
@@ -85,9 +95,12 @@ void ChatClient::logout(json::Var& data) {
 }
 
 void ChatClient::update(json::Var& data) {
-    bool add = data["add"].getBoolean();
-    net::ClientID id = data["id"].getInteger();
-    std::string username = data["username"].getString();
+    bool add;
+    net::ClientID id;
+    std::string username;
+    if (!data["add"].get(add) || !data["id"].get(id) || !data["username"].get(username)) {
+        return;
+    }
     if (add) {
         // add to userlist
         this->users[id] = username;

@@ -32,24 +32,24 @@
 		<Compiler>
 			<Add option="-std=c++0x" />
 			<Add option="-Wall" />
+			<Add directory="./include/" />
 		</Compiler>
 		<Linker>
 			<Add library="SDL" />
 			<Add library="SDL_net" />
 		</Linker>
-		<Unit filename="README.md" />
-		<Unit filename="demo/chatclient.cpp" />
-		<Unit filename="demo/chatclient.hpp" />
-		<Unit filename="demo/chatserver.cpp" />
-		<Unit filename="demo/chatserver.hpp" />
-		<Unit filename="demo/commands.hpp" />
-		<Unit filename="demo/main.cpp" />
-		<Unit filename="net/client.hpp" />
-		<Unit filename="net/server.hpp" />
-		<Unit filename="net/json.cpp" />
-		<Unit filename="net/json.hpp" />
-		<Unit filename="net/link.hpp" />
-		<Unit filename="net/common.hpp" />
+		<Unit filename="example/chatclient.cpp" />
+		<Unit filename="example/chatclient.hpp" />
+		<Unit filename="example/chatserver.cpp" />
+		<Unit filename="example/chatserver.hpp" />
+		<Unit filename="example/commands.hpp" />
+		<Unit filename="example/main.cpp" />
+		<Unit filename="include/json/json.hpp" />
+		<Unit filename="include/net/client.hpp" />
+		<Unit filename="include/net/common.hpp" />
+		<Unit filename="include/net/link.hpp" />
+		<Unit filename="include/net/server.hpp" />
+		<Unit filename="src/json/json.cpp" />
 		<Extensions>
 			<code_completion />
 			<debugger />

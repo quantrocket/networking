@@ -163,7 +163,9 @@ namespace net {
                     // check maximum clients
                     if (this->max_clients != -1) {
                         this->workers_mutex.lock();
-                        bool full = (this->next_id == this->max_clients);
+                        // avoid warning (-Wsign-compare)
+                        std::uint16_t tmp = (std::uint16_t)(this->max_clients);
+                        bool full = (this->next_id == tmp);
                         this->workers_mutex.unlock();
                         if (full) {
                             utils::delay(1000);
@@ -207,9 +209,7 @@ namespace net {
                     }
                     // Get Worker's Link
                     ClientID id;
-                    try {
-                        id = obj["source"].getInteger();
-                    } catch (json::TypeError const te) {
+                    if (!obj["source"].get(id)) {
                         continue;
                     }
                     this->workers_mutex.lock();
@@ -286,13 +286,10 @@ namespace net {
                         utils::delay(15);
                     } else {
                         ClientID source;
-                        json::Var payload;
+                        json::Var payload = object["payload"];
                         CommandID command_id;
-                        try {
-                            source     = object["source"].getInteger();
-                            payload    = object["payload"];
-                            command_id = payload["command"].getInteger();
-                        } catch (json::TypeError const & te) {
+                        if (!object["source"].get(source)
+                            || !payload["command"].get(command_id)) {
                             continue;
                         }
                         // Search callback

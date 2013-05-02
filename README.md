@@ -38,11 +38,11 @@ You can find a server-client-based chatroom example in the directory `example/`.
 # Building
 ===
 
-Build with Code::Blocks ist most simple. Just use `networking.cbp` and build as you always do.
+Note: This Framework is a header-only framework. Just include the header-files and get ready!
 
-If you are using GCC without building can be done by the following line.
+Build with Code::Blocks ist most simple. Just use `networking.cbp` and build as you always do. If you are using GCC without building can be done by the following line.
 
-    g++ -o chatroom src/json/*.cpp example/*.cpp -lSDL_net --std=c++0x -pthread -I./include/
+    g++ -o chatroom example/*.cpp -lSDL_net --std=c++0x -pthread -I./include/
 
 I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3. But it should work with MinGW as-well. Just remember too add e.g. `-lmingw32` (I had to add when compiling using Wine on my 32-bit machine.)
 
