@@ -51,10 +51,8 @@ void ChatClient::login(json::Var& data) {
     bool success;
     if (!data["id"].get(id) || !data["username"].get(username)
         || !data["success"].get(success)) {
-        std::cout << "failure\n";
         return;
     }
-    std::cout << success << "\n";
     if (!this->authed && id == this->id) {
         if (success) {
             this->username = username;
