@@ -6,9 +6,9 @@
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
-			<Target title="Dev">
+			<Target title="dev">
 				<Option output="chatroom" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Debug/" />
+				<Option object_output="obj/dev/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
@@ -16,9 +16,9 @@
 					<Add option="-g" />
 				</Compiler>
 			</Target>
-			<Target title="Stable">
+			<Target title="stable">
 				<Option output="chatroom" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Release/" />
+				<Option object_output="obj/stable/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
@@ -49,7 +49,6 @@
 		<Unit filename="include/net/common.hpp" />
 		<Unit filename="include/net/link.hpp" />
 		<Unit filename="include/net/server.hpp" />
-		<Unit filename="src/json/json.cpp" />
 		<Extensions>
 			<code_completion />
 			<debugger />

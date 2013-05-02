@@ -8,6 +8,6 @@ include/net/*~
 include/json/*~
 example/*~
 obj/*
-obj/Debug/*
-obj/Release/*
+obj/dev/*
+obj/stable/*
 networking.layout
