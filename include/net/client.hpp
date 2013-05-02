@@ -34,9 +34,10 @@ SOFTWARE.
 #include <cstdint>
 #include <thread>
 
-#include "link.hpp"
-#include "json.hpp"
-#include "common.hpp"
+#include <json/json.hpp>
+
+#include <net/link.hpp>
+#include <net/common.hpp>
 
 namespace net {
 

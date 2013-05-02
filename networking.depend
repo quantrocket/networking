@@ -1,12 +1,12 @@
 # depslib dependency file v1.0
-1366198251 source:/home/christian/Dropbox/Projekte/networking/example/chatclient.cpp
+1367476568 source:/home/christian/Dropbox/Projekte/networking/example/chatclient.cpp
 	"chatclient.hpp"
 	"commands.hpp"
 
-1366195358 /home/christian/Dropbox/Projekte/networking/example/chatclient.hpp
+1367476550 /home/christian/Dropbox/Projekte/networking/example/chatclient.hpp
 	<iostream>
 	<map>
-	"../src/clientserver/client.hpp"
+	<net/client.hpp>
 
 1363772268 /home/christian/Dropbox/Projekte/networking/example/common.hpp
 	"../src/eventsystem.hpp"
@@ -39,19 +39,19 @@
 	"connection.hpp"
 	"eventsystem.hpp"
 
-1366209879 source:/home/christian/Dropbox/Projekte/networking/example/chatserver.cpp
+1367154733 source:/home/christian/Dropbox/Projekte/networking/example/chatserver.cpp
 	"chatserver.hpp"
 	"commands.hpp"
 
-1366195364 /home/christian/Dropbox/Projekte/networking/example/chatserver.hpp
+1367476554 /home/christian/Dropbox/Projekte/networking/example/chatserver.hpp
 	<iostream>
 	<map>
-	"../src/clientserver/server.hpp"
+	<net/server.hpp>
 
 1363768067 source:/home/christian/Dropbox/Projekte/networking/example/common.cpp
 	"common.hpp"
 
-1366209955 source:/home/christian/Dropbox/Projekte/networking/example/main.cpp
+1366263456 source:/home/christian/Dropbox/Projekte/networking/example/main.cpp
 	<iostream>
 	"commands.hpp"
 	"chatclient.hpp"
@@ -127,9 +127,8 @@
 1366195735 /home/christian/Dropbox/Projekte/networking/src/clientserver/common.hpp
 	<cstdint>
 
-1366198331 /home/christian/Dropbox/Projekte/networking/example/commands.hpp
-	"../src/clientserver/server.hpp"
-	"../src/clientserver/client.hpp"
+1367476962 /home/christian/Dropbox/Projekte/networking/example/commands.hpp
+	<net/common.hpp>
 
 1366209864 /home/christian/Dropbox/Projekte/networking/src/clientserver/server.hpp
 	<set>
@@ -144,10 +143,10 @@
 	"chatclient.hpp"
 	"commands.hpp"
 
-1367154638 /home/christian/Dropbox/Projekte/networking/demo/chatclient.hpp
+1367476550 /home/christian/Dropbox/Projekte/networking/demo/chatclient.hpp
 	<iostream>
 	<map>
-	"../net/client.hpp"
+	<net/client.hpp>
 
 1367168622 /home/christian/Dropbox/Projekte/networking/net/client.hpp
 	<set>
@@ -185,10 +184,10 @@
 	"chatserver.hpp"
 	"commands.hpp"
 
-1367154653 /home/christian/Dropbox/Projekte/networking/demo/chatserver.hpp
+1367476554 /home/christian/Dropbox/Projekte/networking/demo/chatserver.hpp
 	<iostream>
 	<map>
-	"../net/server.hpp"
+	<net/server.hpp>
 
 1367247946 /home/christian/Dropbox/Projekte/networking/net/server.hpp
 	<set>
@@ -206,4 +205,78 @@
 
 1367167188 source:/home/christian/Dropbox/Projekte/networking/net/json.cpp
 	"json.hpp"
+
+1367476621 /home/christian/Dropbox/Projekte/networking//net/server.hpp
+	<set>
+	<map>
+	<cstdint>
+	<net/link.hpp>
+	<net/json.hpp>
+	<net/common.hpp>
+
+1366973315 /home/christian/Dropbox/Projekte/networking//net/link.hpp
+	<iostream>
+	<stdlib.h>
+	<cstdint>
+	<SDL/SDL_net.h>
+
+1366973533 /home/christian/Dropbox/Projekte/networking//net/json.hpp
+	<iostream>
+	<stack>
+	<string>
+	<vector>
+	<map>
+	<stdexcept>
+
+1366968434 /home/christian/Dropbox/Projekte/networking//net/common.hpp
+	<chrono>
+	<queue>
+	<mutex>
+	<thread>
+
+1367476650 /home/christian/Dropbox/Projekte/networking//net/client.hpp
+	<set>
+	<map>
+	<cstdint>
+	<thread>
+	<net/link.hpp>
+	<net/json.hpp>
+	<net/common.hpp>
+
+1367477056 /home/christian/Dropbox/Projekte/networking/include//net/client.hpp
+	<set>
+	<map>
+	<cstdint>
+	<thread>
+	<json/json.hpp>
+	<net/link.hpp>
+	<net/common.hpp>
+
+1367477163 /home/christian/Dropbox/Projekte/networking/include//json/json.hpp
+	<iostream>
+	<stack>
+	<string>
+	<vector>
+	<map>
+	<stdexcept>
+
+1366973315 /home/christian/Dropbox/Projekte/networking/include//net/link.hpp
+	<iostream>
+	<stdlib.h>
+	<cstdint>
+	<SDL/SDL_net.h>
+
+1366968434 /home/christian/Dropbox/Projekte/networking/include//net/common.hpp
+	<chrono>
+	<queue>
+	<mutex>
+	<thread>
+
+1367477054 /home/christian/Dropbox/Projekte/networking/include//net/server.hpp
+	<set>
+	<map>
+	<cstdint>
+	<json/json.hpp>
+	<net/link.hpp>
+	<net/common.hpp>
 

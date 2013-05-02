@@ -25,34 +25,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef CHATSERVER_HPP
-#define CHATSERVER_HPP
+#pragma once
+#ifndef COMMANDS_HPP_INCLUDED
+#define COMMANDS_HPP_INCLUDED
 
-#include <iostream>
-#include <map>
+#include <net/common.hpp>
 
-#include "../net/server.hpp"
+namespace commands {
 
-class ChatServer;
+    const net::CommandID LOGIN_REQUEST    = 1;
+    const net::CommandID LOGIN_RESPONSE   = 2;
+    const net::CommandID LOGOUT_REQUEST   = 3;
+    const net::CommandID LOGOUT_RESPONSE  = 4;
+    const net::CommandID MESSAGE_REQUEST  = 5;
+    const net::CommandID MESSAGE_RESPONSE = 6;
+    const net::CommandID USERLIST_UPDATE  = 7;
 
-class ChatServer: public net::Server<ChatServer> {
+}
 
-    protected:
-        std::map<net::ClientID, std::string> users;
-
-        void login(json::Var& data, net::ClientID const id);
-        void message(json::Var& data, net::ClientID const id);
-        void logout(json::Var& data, net::ClientID const id);
-
-        void fallback(json::Var& data, net::ClientID const id);
-
-    public:
-        ChatServer(std::uint16_t const port);
-        virtual ~ChatServer();
-
-        void request_logout();
-
-};
-
-#endif
-
+#endif // COMMANDS_HPP_INCLUDED

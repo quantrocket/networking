@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="networking" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Dev">
+				<Option output="chatroom" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-Wall" />
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Stable">
+				<Option output="chatroom" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-std=c++0x" />
+			<Add option="-Wall" />
+		</Compiler>
+		<Linker>
+			<Add library="SDL" />
+			<Add library="SDL_net" />
+		</Linker>
+		<Unit filename="README.md" />
+		<Unit filename="demo/chatclient.cpp" />
+		<Unit filename="demo/chatclient.hpp" />
+		<Unit filename="demo/chatserver.cpp" />
+		<Unit filename="demo/chatserver.hpp" />
+		<Unit filename="demo/commands.hpp" />
+		<Unit filename="demo/main.cpp" />
+		<Unit filename="net/client.hpp" />
+		<Unit filename="net/server.hpp" />
+		<Unit filename="net/json.cpp" />
+		<Unit filename="net/json.hpp" />
+		<Unit filename="net/link.hpp" />
+		<Unit filename="net/common.hpp" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

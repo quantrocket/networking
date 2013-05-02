@@ -33,9 +33,10 @@ SOFTWARE.
 #include <map>
 #include <cstdint>
 
-#include "link.hpp"
-#include "json.hpp"
-#include "common.hpp"
+#include <json/json.hpp>
+
+#include <net/link.hpp>
+#include <net/common.hpp>
 
 namespace net {
 
