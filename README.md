@@ -28,7 +28,7 @@ Please pay attention to use `float` for floating point variables in the context 
 # Known Bugs
 ===
 
-(1) Server shutdown: Shutdown the server before destroying the server object. Otherwise the handle_loop might try to access your (derived) server's method after the server was destroyed. Because the latest derived class instance is destroyed first, the basic server might be running in this case. It will be closed at last.
+- Server shutdown: Shutdown the server before destroying the server object. Otherwise the handle_loop might try to access your (derived) server's method after the server was destroyed. Because the latest derived class instance is destroyed first, the basic server might be running in this case. It will be closed at last.
 
 # Example
 ===
@@ -44,7 +44,7 @@ If you are using GCC without building can be done by the following line.
 
     g++ -o chatroom src/json/*.cpp example/*.cpp -lSDL_net --std=c++0x -pthread -I./include/
 
-I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
+I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3. But it should work with MinGW as-well. Just remember too add e.g. `-lmingw32` (I had to add when compiling using Wine on my 32-bit machine.)
 
 # Scheduled Changes
 ===
