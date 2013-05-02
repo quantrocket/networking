@@ -449,6 +449,16 @@ namespace json {
                 }
                 return false;
             }
+            inline Var& operator=(long const integer) {
+                this->type = INTEGER;
+                this->integer = integer;
+                return *this;
+            }
+            inline Var& operator=(unsigned long const integer) {
+                this->type = INTEGER;
+                this->integer = integer;
+                return *this;
+            }
             bool get(float & target) {
                 if (this->type == FLOAT) {
                     target = this->integer;

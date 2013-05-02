@@ -40,7 +40,7 @@ You can find a server-client-based chatroom example in the directory `example/`.
 
 Note: This Framework is a header-only framework. Just include the header-files and get ready!
 
-Build with Code::Blocks ist most simple. Just use `networking.cbp` and build as you always do. If you are using GCC without building can be done by the following line.
+Build with Code::Blocks is most simple. Just use `networking.cbp` and build as you always do. If you are using GCC without building can be done by the following line.
 
     g++ -o chatroom example/*.cpp -lSDL_net --std=c++0x -pthread -I./include/
 
