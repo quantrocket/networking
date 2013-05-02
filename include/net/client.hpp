@@ -197,7 +197,7 @@ namespace net {
             /**
              * This will wait for an empty outgoing queue and then disconnects.
              */
-            void shutdown() {
+            virtual void shutdown() {
                 // wait until outgoing queue is empty
                 // @note: data that is pushed while this queue is waiting might be lost
                 while (this->isOnline() && !this->out.isEmpty()) {
