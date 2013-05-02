@@ -1,10 +1,10 @@
 /*
 Copyright (c) 2013 Christian Glöckner <cgloeckner@freenet.de>
 
-This file is part of the json module:
-    https://github.com/cgloeckner/json
+This file is part of the networking module:
+    https://github.com/cgloeckner/networking
 
-It offers an JSON-Implemetation for various purposes.
+It offers a json-based networking framework for games and other software.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
