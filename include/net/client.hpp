@@ -149,12 +149,9 @@ namespace net {
              * Will disconnect from the server
              */
             virtual ~Client() {
-                /// wait until outgoing queue is empty
-                // @note: data that is pushed while this queue is waiting might be lost
-                while (!this->out.isEmpty()) {
-                    utils::delay(15);
+                if (this->isOnline()) {
+                    this->disconnect();
                 }
-                this->disconnect();
             }
 
             /// Establish connection to the server at the given IP and port
@@ -194,6 +191,20 @@ namespace net {
              */
             inline bool isOnline() {
                 return this->link.isOnline();
+            }
+
+            /// Disconnect safely
+            /**
+             * This will wait for an empty outgoing queue and then disconnects.
+             */
+            void shutdown() {
+                // wait until outgoing queue is empty
+                // @note: data that is pushed while this queue is waiting might be lost
+                while (this->isOnline() && !this->out.isEmpty()) {
+                    utils::delay(15);
+                }
+
+                this->disconnect();
             }
 
             /// Disconnect the current connection

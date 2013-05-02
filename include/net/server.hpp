@@ -327,7 +327,7 @@ namespace net {
              */
             virtual ~Server() {
                 if (this->listener.isOnline()) {
-                    this->shutdown();
+                    this->disconnect();
                 }
             }
 
@@ -359,18 +359,28 @@ namespace net {
                 return this->listener.isOnline();
             }
 
+            /// Shutdown the server safely
+            /**
+             * This will wait for an empty outgoing queue and disconnect the
+             *  server safely.
+             */
+            void shutdown() {
+                // wait until outgoing queue is empty
+                // @note: data that is pushed while this queue is waiting might be lost
+                while (this->isOnline() && !this->out.isEmpty()) {
+                    utils::delay(15);
+                }
+
+                this->disconnect();
+            }
+
             /// Shutdown the server
             /**
              * This will stop listening on a local port and shutdown the
              *  accepter-loop Thread safely. It also will disconnect all
              *  workers, stop their Threads and delete them from the server
              */
-            void shutdown() {
-                // wait until outgoing queue is empty
-                // @note: data that is pushed while this queue is waiting might be lost
-                while (!this->out.isEmpty()) {
-                    utils::delay(15);
-                }
+            void disconnect() {
                 // shutdown listener
                 this->listener.close();
                 this->accepter.join();

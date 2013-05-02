@@ -53,6 +53,7 @@ int main(int argc, char **argv) {
                     break;
                 }
             }
+            server->shutdown();
             delete server;
             break;
         }
@@ -70,6 +71,7 @@ int main(int argc, char **argv) {
                     client->request_message(input);
                 }
             }
+            client->shutdown();
             delete client;
             break;
         }

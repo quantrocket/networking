@@ -318,6 +318,7 @@ namespace net {
                         this->online = false;
                         throw BrokenPipe();
                     }
+                    //std::clog << ">> " << s << std::endl << std::flush;
                 }
 
                 /// Receive a string
@@ -360,6 +361,7 @@ namespace net {
                     buffer[size] = '\0';
                     std::string s = std::string(buffer);
                     free(buffer);
+                    //std::clog << "<< " << s << std::endl << std::flush;
                     return s;
                 }
 

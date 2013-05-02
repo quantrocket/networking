@@ -461,14 +461,14 @@ namespace json {
             }
             bool get(float & target) {
                 if (this->type == FLOAT) {
-                    target = this->integer;
+                    target = this->floating;
                     return true;
                 }
                 return false;
             }
             bool get(bool & target) {
                 if (this->type == BOOLEAN) {
-                    target = this->integer;
+                    target = this->boolean;
                     return true;
                 }
                 return false;
