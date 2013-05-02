@@ -12,6 +12,14 @@ Kind regards, Christian Glöckner
 
 The first approach for my networking framework was about using plain data. I collected primitive values in structures (called "events") and sent them over the network. For correct identification it was necessary to give unique id to each event type and switch them after receiving. This whole ugly switching and typecasting can be reduced when using serialized data. Because of it's low overhead I decided to use JSON! It is also ready-to-use for maintenance and easy to read for humans.
 
+For further information see http://github.com/cgloeckner/json.
+
+# Dependencies
+===
+
+- C++11
+- SDL_net (currently customized for version 1.2)
+
 # Current Limitations
 ===
 
@@ -32,9 +40,11 @@ You can find a server-client-based chatroom example in the directory `example/`.
 # Building
 ===
 
-Building the module is easy; just remember to link SDL and SDL_net. Also you need to mention C++11 to your compiler as well as pthreads. You can build the example just by
+Build with Code::Blocks ist most simple. Just use `networking.cbp` and build as you always do.
 
-    g++ -o chatroom src/*.cpp example/*.cpp -lSDL_net --std=c++0x -pthread
+If you are using GCC without building can be done by the following line.
+
+    g++ -o chatroom src/json/*.cpp example/*.cpp -lSDL_net --std=c++0x -pthread -I./include/
 
 I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 
@@ -42,5 +52,3 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3.
 ===
 
 - event more detailed testing (e.g. for memory leaks)
-
-
