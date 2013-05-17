@@ -45,3 +45,5 @@ I testet it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3. But it should wor
 ===
 
 - event more detailed testing (e.g. for memory leaks)
+- use boost::asio instead SDL_net
+- seperate callback-map from client/server for less "over-template" structure
