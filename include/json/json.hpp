@@ -80,7 +80,7 @@ namespace json {
         protected:
             Type type;
             std::string string;
-            std::uint32_t integer;
+            std::int32_t integer;
             float floating; // string conversion cuts some decimal place
             bool boolean;
             Array array;
