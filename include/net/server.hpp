@@ -37,33 +37,35 @@ SOFTWARE.
 
 #include <net/link.hpp>
 #include <net/common.hpp>
+#include <net/callbacks.hpp>
 
 namespace net {
 
-    template <typename Derived> class Server;
+    // prototyped for Worker class
+    class Server;
+
+    /// ID for logically grouped clients
+    typedef std::uint32_t GroupID;
 
     /// Worker
     /**
      * This is used in the context of the server class. Each client is handled
-     *  by a worker. This worker contains the client ID, the TCP link and the
-     *  pointer to the related server.
+     *  by a worker. This worker contains the client ID, the TCP link and a
+     *  reference to the related server.
      */
-    template <typename Derived>
     class Worker {
-        friend class Server<Derived>;
+        friend class Server;
 
         protected:
             /// client ID
             ClientID id;
             /// related server
-            Derived& server;
+            Server& server;
             /// TCP link to the client
             tcp::Link& link;
 
             /// Disconnects the worker
-            virtual inline void disconnect() {
-                this->server.disconnect(this->id);
-            }
+            virtual void disconnect();
 
         public:
             /// Constructor
@@ -72,34 +74,14 @@ namespace net {
              *  given TCP link. It will automatically retrieve the next valid
              *  client ID and start the necessary Threads
              */
-            Worker(Derived & server, tcp::Link & link)
-                : server(server)
-                , link(link) {
-                // create worker
-                server.workers_mutex.lock();
-                this->id     = server.next_id++;
-                /*
-                this->server = server;
-                this->link   = link;
-                */
-                // add to server
-                server.workers[this->id] = this;
-                server.workers_mutex.unlock();
-                // set client id to client
-                json::Var welcome;
-                welcome["id"] = this->id;
-                std::string dump = welcome.dump();
-                this->link.write(dump);
-            }
+            Worker(Server & server, tcp::Link & link);
 
             /// Destructor
             /**
              * This will close the link, shutdown the Threads safely and clear
              *  the outgoing queue.
              */
-            virtual ~Worker() {
-                this->link.close();
-            }
+            virtual ~Worker();
 
             /// Returns whether the worker is online
             /**
@@ -110,7 +92,11 @@ namespace net {
                 return this->link.isOnline();
             }
 
+            /// Set of groups this worker was assigned to
+            std::set<GroupID> groups;
+
     };
+
 
     /// Server
     /**
@@ -121,9 +107,8 @@ namespace net {
      *  workers and an outgoing queue with bundles ready for sending to a
      *  worker.
      */
-    template <typename Derived>
-    class Server {
-        friend class Worker<Derived>;
+    class Server: public CallbackManager2<CommandID, json::Var &, ClientID const> {
+        friend class Worker;
 
         protected:
             /// Listener for accepting clients
@@ -139,7 +124,7 @@ namespace net {
             /// Next worker's ID
             ClientID next_id;
             /// Structure of all workers keyed by their IDs
-            std::map<ClientID, Worker<Derived>*> workers;
+            std::map<ClientID, Worker*> workers;
             /// Mutex for next_id and workers
             std::mutex workers_mutex;
             /// Set of blocked IPs
@@ -151,161 +136,19 @@ namespace net {
             /// Queue of outgoing objects
             utils::SyncQueue<json::Var> out;
 
-            /// Command-Callback Mapper
-            std::map<CommandID, void (Derived::*)(json::Var &, ClientID const)> callbacks;
-
-            /// Fallback Handle for undefined commands
-            virtual void fallback(json::Var& data, ClientID const id) = 0;
+            /// Logically grouped clients
+            std::map<GroupID, std::set<ClientID>> groups;
+            /// Mutex for groups
+            std::mutex groups_mutex;
 
             /// Accepter-loop
-            void accept_loop() {
-                while (this->isOnline()) {
-                    // check maximum clients
-                    if (this->max_clients != -1) {
-                        this->workers_mutex.lock();
-                        // avoid warning (-Wsign-compare)
-                        std::uint16_t tmp = (std::uint16_t)(this->max_clients);
-                        bool full = (this->next_id == tmp);
-                        this->workers_mutex.unlock();
-                        if (full) {
-                            utils::delay(1000);
-                            continue;
-                        }
-                    }
-                    // try fetch next connection
-                    tcp::Link* next_link = this->listener.accept();
-                    if (next_link != NULL) {
-                        std::string ip = next_link->host.ip();
-                        this->ips_mutex.lock();
-                        bool blocked = (this->ips.find(ip) != this->ips.end());
-                        this->ips_mutex.unlock();
-                        // add worker if non-blocked ip is used
-                        if (blocked) {
-                            delete next_link;
-                            std::cerr << "Worker from " << ip << " is blocked"
-                              << std::endl;
-                        } else {
-                            Derived& obj = static_cast<Derived&>(*this);
-                            new Worker<Derived>(obj, *next_link);
-                        }
-                    } else {
-                        utils::delay(25);
-                    }
-                }
-            }
-
+            void accept_loop();
             /// Sending-loop
-            void send_loop() {
-                while (this->isOnline()) {
-                    // Wait for Next JSON Object
-                    json::Var obj = this->out.pop();
-                    while (obj.isNull()) {
-                        utils::delay(25);
-                        if (!this->isOnline()) {
-                            // Quit Loop if Offline
-                            return;
-                        }
-                        obj = this->out.pop();
-                    }
-                    // Get Worker's Link
-                    ClientID id;
-                    if (!obj["source"].get(id)) {
-                        continue;
-                    }
-                    this->workers_mutex.lock();
-                    auto node = this->workers.find(id);
-                    bool found = (node != this->workers.end());
-                    this->workers_mutex.unlock();
-                    if (found) {
-                        tcp::Link& link = node->second->link;
-                        if (link.isOnline()) {
-                            // Serialize Object
-                            std::string dump = obj.dump();
-                            // Send to Client
-                            try {
-                                link.write(dump);
-                            } catch (const BrokenPipe& bp) {
-                                std::cerr << "Connection to Worker #"
-                                          << node->first << " was lost"
-                                          << std::endl;
-                                link.close();
-                            }
-                        }
-                    } else {
-                        std::cerr << "Worker #" << id << " not found"
-                                  << std::endl;
-                    }
-                }
-            }
-
+            void send_loop();
             /// Receiving-loop
-            void recv_loop() {
-                while (this->isOnline()) {
-                    // Copy Set of Workers
-                    this->workers_mutex.lock();
-                    auto workers = this->workers;
-                    this->workers_mutex.unlock();
-                    // Iterate Through Workers
-                    for (auto node = workers.begin(); node != workers.end(); node++) {
-                        tcp::Link& link = node->second->link;
-                        if (link.isOnline()) {
-                            while (link.isReady()) {
-                                std::string dump;
-                                // Read Dumped Event
-                                try {
-                                    dump = link.read();
-                                } catch (const BrokenPipe& bp) {
-                                    link.close();
-                                    std::cerr << "Connection to Worker #"
-                                              << node->first << " was lost"
-                                              << std::endl;
-                                    continue;
-                                }
-                                // Deserialize Event
-                                json::Var object;
-                                object.load(dump);
-                                // Wrap Object with ClientID as Source
-                                json::Var wrap;
-                                wrap["source"] = node->first;
-                                wrap["payload"] = object;
-                                this->in.push(wrap);
-                            }
-                        }
-                    }
-                    utils::delay(25);
-                }
-            }
-
+            void recv_loop();
             /// Handle-loop
-            void handle_loop() {
-                while (this->isOnline()) {
-                    // wait for next object
-                    json::Var object = this->pop();
-                    if (object.isNull()) {
-                        // Null-Object
-                        utils::delay(15);
-                    } else {
-                        ClientID source;
-                        json::Var payload = object["payload"];
-                        CommandID command_id;
-                        if (!object["source"].get(source)
-                            || !payload["command"].get(command_id)) {
-                            continue;
-                        }
-                        // Search callback
-                        auto entry = this->callbacks.find(command_id);
-                        if (entry == this->callbacks.end()) {
-                            // Use fallback handle
-                            this->fallback(payload, source);
-                        } else {
-                            // Exexcute callback
-                            auto callback = entry->second;
-                            Derived* ptr = static_cast<Derived*>(this);
-                            (ptr->*callback)(payload, source);
-                        }
-                    }
-                }
-            }
+            void handle_loop();
 
             /// Thread for handle-loop
             std::thread handler;
@@ -316,20 +159,13 @@ namespace net {
              * Create a new server with a maximum number of clients (or -1 for
              *  an undefined maximum).
              */
-            Server(std::int16_t const max_clients=-1)
-                : max_clients(max_clients)
-                , next_id(0) {
-            }
+            Server(std::int16_t const max_clients=-1);
 
             /// Destructor
             /**
              * This will shutdown the server.
              */
-            virtual ~Server() {
-                if (this->listener.isOnline()) {
-                    this->disconnect();
-                }
-            }
+            virtual ~Server();
 
             /// Start the server to listen on a given port
             /**
@@ -337,18 +173,7 @@ namespace net {
              *  It will start the accepter-loop as a Thread.
              *  @param port: local port number
              */
-            void start(std::uint16_t const port) {
-                if (this->isOnline()) {
-                    return;
-                }
-                // start listener
-                this->listener.open(port);
-                this->accepter = std::thread(&Server::accept_loop, this);
-                this->sender   = std::thread(&Server::send_loop,   this);
-                this->receiver = std::thread(&Server::recv_loop,   this);
-                // start handler
-                this->handler  = std::thread(&Server::handle_loop, this);
-            }
+            void start(std::uint16_t const port);
 
             /// Returns whether the server is online
             /**
@@ -364,15 +189,7 @@ namespace net {
              * This will wait for an empty outgoing queue and disconnect the
              *  server safely.
              */
-            virtual void shutdown() {
-                // wait until outgoing queue is empty
-                // @note: data that is pushed while this queue is waiting might be lost
-                while (this->isOnline() && !this->out.isEmpty()) {
-                    utils::delay(15);
-                }
-
-                this->disconnect();
-            }
+            virtual void shutdown();
 
             /// Shutdown the server
             /**
@@ -380,26 +197,7 @@ namespace net {
              *  accepter-loop Thread safely. It also will disconnect all
              *  workers, stop their Threads and delete them from the server
              */
-            void disconnect() {
-                // shutdown listener
-                this->listener.close();
-                this->accepter.join();
-                this->sender.join();
-                this->receiver.join();
-                this->handler.join();
-                // disconnect workers
-                for (auto node = this->workers.begin();
-                     node != this->workers.end(); node++) {
-                    if (node->second != NULL) {
-                        delete node->second;
-                    }
-                }
-                this->workers.clear();
-                this->next_id = 0;
-                // clear queue
-                this->out.clear();
-                this->in.clear();
-            }
+            void disconnect();
 
             /// Disconnect a worker
             /**
@@ -407,16 +205,7 @@ namespace net {
              *  from the server.
              *  @param id: client ID of the worker
              */
-            void disconnect(ClientID const id) {
-                this->workers_mutex.lock();
-                auto node = this->workers.find(id);
-                if (node != this->workers.end()) {
-                    // delete worker
-                    delete node->second;
-                    this->workers.erase(node);
-                }
-                this->workers_mutex.unlock();
-            }
+            void disconnect(ClientID const id);
 
             /// Block an IP-address
             /**
@@ -434,7 +223,7 @@ namespace net {
              * This will remove the given IP-address from the blocking list
              *  @param ip: IP-address or hostname
              */
-            void unblock(const std::string& ip) {
+            inline void unblock(const std::string& ip) {
                 this->ips_mutex.lock();
                 auto node = this->ips.find(ip);
                 if (node != this->ips.end()) {
@@ -445,26 +234,20 @@ namespace net {
 
             /// Return the next bundle
             /**
-             * This will return a pointer to the front bundle of the incomming
-             *  queue and pop it from the queue. If the queue is empty it will
-             *  return NULL. These bundles came from different workers. Use
-             *  the bundle's client ID to find out it's source. Consider to
-             *  delete the bundle after handling it.
-             *  @return pointer to the next bundle
+             * This will return a "bundle" containing the source client's id
+             *  and the original data as object.
+             *  @return next bundle
              */
             inline json::Var pop() {
                 return this->in.pop();
             }
 
-            /// Push an event to a worker
+            /// Push an object to a worker
             /**
-             * This will create a bundle using the destination id, the event-
-             *  pointer and the event data's size. This size is taken from
-             *  the type TEvent of the event-pointer. The created bundle will
-             *  be pushed to the related worker's outgoing queue. Consider
-             *  that you should not delete the event after pushing it. This
-             *  is done automatically after sending it.
-             *  @param event: event-pointer
+             * This will push an object to a given worker. The object is
+             *  serialized and send through the socket. At the other side it
+             *  can be popped to obtain the data.
+             *  @param object: an object to send
              *  @param id: destination's client ID
              */
             inline void push(json::Var const & object, ClientID const id) {
@@ -474,29 +257,63 @@ namespace net {
                 this->out.push(wrap);
             }
 
+            /// Push an object to all workers
             /**
-             * This will create new bundles using the event-pointer and the
-             *  event data's size. This size is taken from the type TEvent of
-             *  the event-pointer. The destination's client ID will be taken
-             *  from the server's worker-map. Consider that you should not
-             *  delete the event after pushing it. The event is multiple copied
-             *  (for each worker). The original event is deleted at the end
-             *  of this method. The copies are automatically after sending.
-             *  @param event: event-pointer
+             * This will push a data package to all clients. It works just like
+             *  the common `push` method of this server class, but might reach
+             *  more speed then notifying all clients by single calls.
+             *  @param object: object to send
              */
-            void push(json::Var const & object) {
-                this->workers_mutex.lock();
-                auto workers = this->workers;
-                this->workers_mutex.unlock();
-                for (auto node = workers.begin(); node != workers.end(); node++) {
-                    if (node->second != NULL && node->second->isOnline()) {
-                        json::Var wrap;
-                        wrap["source"] = node->first;
-                        wrap["payload"] = object;
-                        this->out.push(wrap);
-                    }
-                }
-            }
+            void push(json::Var const & object);
+
+            /// Push an object to some workers
+            /**
+             * This will push a data package to all clients in the given group
+             *  It works just like the common `push` method of this server
+             *  class, but might reach more speed then notifying all clients by
+             *  single calls.
+             *  If the group does not exist, this method will ignore it. So
+             *  check group existence with `hasGroup` if necessary.
+             *  @param object: object to send
+             *  @param group: group id to use for client notification
+             */
+            void pushGroup(json::Var const & object, GroupID const group);
+
+            /// Add a client to a group
+            /**
+             * Will add the client to a group. If the group does not exist yet,
+             *  it will be created.
+             * @param client: id of the client
+             * @param group: id of the group
+             */
+            void group(ClientID const client, GroupID const group);
+
+            /// Remove a client from a group
+            /**
+             * Will remove a client from a group. If the client is not in the
+             *  group, if the client does not exist or if the group does not
+             *  exist, this method will ignore this.
+             * @param client: id of the client
+             * @param group: id of the group
+             */
+            void ungroup(ClientID const client, GroupID const group);
+
+            /// Return all clients in this group
+            /**
+             * Will return a set of clients from this group. If the given group
+             *  does not exist or is empty, an empty set will be returned.
+             * @param group: id of the group
+             * @return a set of clients
+             */
+            std::set<ClientID> getClients(GroupID const group);
+
+            /// Returns wheather the group exists or not
+            /**
+             * Will return true if the group exists, else false.
+             * @return true or false if group exists or not
+             */
+            bool hasGroup(GroupID const group);
+
     };
 
 }

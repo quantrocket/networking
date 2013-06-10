@@ -33,7 +33,7 @@ SOFTWARE.
 
 #include <net/client.hpp>
 
-class ChatClient: public net::Client<ChatClient> {
+class ChatClient: public net::Client {
 
     protected:
         std::map<net::ClientID, std::string> users;

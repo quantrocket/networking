@@ -38,18 +38,16 @@ SOFTWARE.
 
 #include <net/link.hpp>
 #include <net/common.hpp>
+#include <net/callbacks.hpp>
 
 namespace net {
-
-    template <typename Derived> class Client;
 
     /// Client
     /**
      * The client provides communication with a given server. Sending and
      *  receiving data are handled in two seperate threads.
      */
-    template <typename Derived>
-    class Client {
+    class Client: public CallbackManager<CommandID, json::Var &> {
 
         protected:
             /// Thread for sending-receiving-loop
@@ -60,99 +58,25 @@ namespace net {
             utils::SyncQueue<json::Var> out;
             utils::SyncQueue<json::Var> in;
 
-            /// Command-Callback Mapper
-            std::map<CommandID, void (Derived::*)(json::Var&)> callbacks;
             /// Link to the server
             tcp::Link link;
             /// Client ID
             ClientID id;
 
-            /// Fallback Handle for undefined commands
-            virtual void fallback(json::Var& data) = 0;
-
             /// Sending-Receiving-loop
-            void network_loop() {
-                while (this->isOnline()) {
-                    // Send All JSON Objects
-                    while (true) {
-                        json::Var object = this->out.pop();
-                        if (object.isNull()) {
-                            // Nothing Left
-                            break;
-                        }
-                        // Serialize Object
-                        std::string dump = object.dump();
-                        // Send to Server
-                        try {
-                            this->link.write(dump);
-                        } catch (const BrokenPipe& bp) {
-                            std::cerr << "Connection to server was lost" << std::endl;
-                            this->link.close();
-                            return;
-                        }
-                    }
-                    // Receive All JSON Objects
-                    while (this->link.isReady()) {
-                        std::string dump;
-                        // Read Dumped Object
-                        try {
-                            dump = this->link.read();
-                        } catch (const BrokenPipe& bp) {
-                            std::cerr << "Connection to server was lost" << std::endl;
-                            this->link.close();
-                            return;
-                        }
-                        // Deserialize JSON Object
-                        json::Var object;
-                        object.load(dump);
-                        this->in.push(object);
-                    }
-                    utils::delay(25);
-                }
-            }
+            void network_loop();
             /// Handle-loop
-            void handle_loop()  {
-                while (this->isOnline()) {
-                    // wait for next object
-                    json::Var object = this->pop();
-                    if (object.isNull()) {
-                        // Null-Object
-                        utils::delay(15);
-                    } else {
-                        json::Var payload = object["payload"];
-                        CommandID command_id;
-                        if (!payload["command"].get(command_id)) {
-                            continue;
-                        }
-                        // Search callback
-                        auto entry = this->callbacks.find(command_id);
-                        if (entry == this->callbacks.end()) {
-                            // Use fallback handle
-                            this->fallback(payload);
-                        } else {
-                            // Exexcute callback
-                            auto callback = entry->second;
-                            Derived* ptr = static_cast<Derived*>(this);
-                            (ptr->*callback)(payload);
-                        }
-                    }
-                }
-            }
+            void handle_loop();
 
         public:
             /// Constructor
-            Client() {
-            }
+            Client();
 
             /// Destructor
             /**
              * Will disconnect from the server
              */
-            virtual ~Client() {
-                if (this->isOnline()) {
-                    this->disconnect();
-                }
-            }
+            virtual ~Client();
 
             /// Establish connection to the server at the given IP and port
             /**
@@ -165,24 +89,7 @@ namespace net {
              *  @param ip: IP-address or hostname of the remote server
              *  @param port: port number of the remove server
              */
-            void connect(std::string const & ip, std::uint16_t const port) {
-                if (this->isOnline()) {
-                    return;
-                }
-                // open connection
-                this->link.open(ip, port);
-                // receive client id
-                std::string dump = this->link.read();
-                json::Var welcome;
-                welcome.load(dump);
-                if (!welcome["id"].get(this->id)) {
-                    throw std::runtime_error("Did not get ClientID from server");
-                }
-                // start threads
-                this->networker = std::thread(&Client::network_loop, this);
-                // start handler
-                this->handler = std::thread(&Client::handle_loop, this);
-            }
+            void connect(std::string const & ip, std::uint16_t const port);
 
             /// Returns whether the client is online
             /**
@@ -197,30 +104,14 @@ namespace net {
             /**
              * This will wait for an empty outgoing queue and then disconnects.
              */
-            virtual void shutdown() {
-                // wait until outgoing queue is empty
-                // @note: data that is pushed while this queue is waiting might be lost
-                while (this->isOnline() && !this->out.isEmpty()) {
-                    utils::delay(15);
-                }
-
-                this->disconnect();
-            }
+            virtual void shutdown();
 
             /// Disconnect the current connection
             /**
              * This will close the current link to the server and safely stop
              *  the sending- and receiving-loop threads
              */
-            void disconnect() {
-                // close connection
-                this->link.close();
-                this->networker.join();
-                this->handler.join();
-                // clear queues
-                this->in.clear();
-                this->out.clear();
-            }
+            void disconnect();
 
             /// Get the next incomming bundle
             /**
@@ -229,7 +120,7 @@ namespace net {
              *  the incomming queue is empty.
              *  @return pointer to bundle or NULL
              */
-            json::Var pop() {
+            inline json::Var pop() {
                 return this->in.pop();
             }
 
@@ -242,7 +133,7 @@ namespace net {
              *  automatically deleted after sending to the server.
              *  @param event: event-pointer
              */
-            void push(json::Var const & data){
+            inline void push(json::Var const & data){
                 this->out.push(data);
             }
 

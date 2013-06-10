@@ -29,11 +29,10 @@ SOFTWARE.
 #include "commands.hpp"
 
 ChatServer::ChatServer(const std::uint16_t port)
-    : net::Server<ChatServer>() {
-
-    this->callbacks[commands::LOGIN_REQUEST]   = &ChatServer::login;
-    this->callbacks[commands::LOGOUT_REQUEST]  = &ChatServer::logout;
-    this->callbacks[commands::MESSAGE_REQUEST] = &ChatServer::message;
+    : net::Server() {
+    this->attach(commands::LOGIN_REQUEST, &ChatServer::login);
+    this->attach(commands::LOGOUT_REQUEST, &ChatServer::logout);
+    this->attach(commands::MESSAGE_REQUEST, &ChatServer::message);
 
     this->start(port);
     std::cout << "Server started" << std::endl;
@@ -44,7 +43,7 @@ ChatServer::~ChatServer() {
     std::cout << "Server stopped" << std::endl;
 }
 
-void ChatServer::login(json::Var& data, net::ClientID const id) {
+ void ChatServer::login(json::Var & data, net::ClientID const id) {
     // seek id
     auto node = this->users.find(id);
     if (node != this->users.end()) {
@@ -61,6 +60,7 @@ void ChatServer::login(json::Var& data, net::ClientID const id) {
     }
     // add user
     this->users[id] = username;
+    this->group(id, 0); // add to group #0
     // loggin successful
     json::Var answer;
     answer["command"] = commands::LOGIN_RESPONSE;
@@ -87,7 +87,7 @@ void ChatServer::login(json::Var& data, net::ClientID const id) {
     }
 }
 
-void ChatServer::message(json::Var& data, net::ClientID const id) {
+void ChatServer::message(json::Var & data, net::ClientID const id) {
     std::string text;
     if (!data["text"].get(text)) {
         return;
@@ -100,6 +100,9 @@ void ChatServer::message(json::Var& data, net::ClientID const id) {
     }
     // show message
     std::cout << "<" << (node->second) << "> " << text << std::endl;
+
+    /// Method2 #1: iterate through all clients
+    /*
     // broadcast message to clients
     node = this->users.begin();
     while (node != this->users.end()) {
@@ -110,6 +113,23 @@ void ChatServer::message(json::Var& data, net::ClientID const id) {
         this->push(answer, node->first);
         node++;
     }
+    */
+
+    /// Methode #2: send to all clients directly
+    /*
+    json::Var answer;
+    answer["command"] = commands::MESSAGE_RESPONSE;
+    answer["text"] = text;
+    answer["id"] = id;
+    this->push(answer);
+    */
+
+    /// Methode #3: send to all clients in the given group
+    json::Var answer;
+    answer["command"] = commands::MESSAGE_RESPONSE;
+    answer["text"] = text;
+    answer["id"] = id;
+    this->pushGroup(answer, 0); // to group #0
 }
 
 void ChatServer::logout(json::Var& data, net::ClientID const id) {
@@ -139,6 +159,7 @@ void ChatServer::logout(json::Var& data, net::ClientID const id) {
         }
         node++;
     }
+    // user is automatically removed from all groups when disconnecting
 }
 
 void ChatServer::fallback(json::Var& data, net::ClientID const id) {

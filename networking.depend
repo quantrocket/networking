@@ -1,9 +1,9 @@
 # depslib dependency file v1.0
-1367528193 source:/home/christian/Dropbox/Projekte/networking/example/chatclient.cpp
+1370855072 source:/home/christian/Dropbox/Projekte/networking/example/chatclient.cpp
 	"chatclient.hpp"
 	"commands.hpp"
 
-1367476550 /home/christian/Dropbox/Projekte/networking/example/chatclient.hpp
+1370855032 /home/christian/Dropbox/Projekte/networking/example/chatclient.hpp
 	<iostream>
 	<map>
 	<net/client.hpp>
@@ -39,11 +39,11 @@
 	"connection.hpp"
 	"eventsystem.hpp"
 
-1367505855 source:/home/christian/Dropbox/Projekte/networking/example/chatserver.cpp
+1370859506 source:/home/christian/Dropbox/Projekte/networking/example/chatserver.cpp
 	"chatserver.hpp"
 	"commands.hpp"
 
-1367476554 /home/christian/Dropbox/Projekte/networking/example/chatserver.hpp
+1370855519 /home/christian/Dropbox/Projekte/networking/example/chatserver.hpp
 	<iostream>
 	<map>
 	<net/server.hpp>
@@ -243,7 +243,7 @@
 	<net/json.hpp>
 	<net/common.hpp>
 
-1367530072 /home/christian/Dropbox/Projekte/networking/include//net/client.hpp
+1370855457 /home/christian/Dropbox/Projekte/networking/include//net/client.hpp
 	<set>
 	<map>
 	<cstdint>
@@ -251,8 +251,9 @@
 	<json/json.hpp>
 	<net/link.hpp>
 	<net/common.hpp>
+	<net/callbacks.hpp>
 
-1367528028 /home/christian/Dropbox/Projekte/networking/include//json/json.hpp
+1369309261 /home/christian/Dropbox/Projekte/networking/include//json/json.hpp
 	<iostream>
 	<stack>
 	<string>
@@ -261,26 +262,40 @@
 	<stdexcept>
 	<cstdint>
 
-1367530084 /home/christian/Dropbox/Projekte/networking/include//net/link.hpp
+1370856978 /home/christian/Dropbox/Projekte/networking/include//net/link.hpp
 	<iostream>
 	<stdlib.h>
 	<cstdint>
 	<SDL/SDL_net.h>
 
-1367505150 /home/christian/Dropbox/Projekte/networking/include//net/common.hpp
+1370854105 /home/christian/Dropbox/Projekte/networking/include//net/common.hpp
 	<chrono>
 	<queue>
 	<mutex>
 	<thread>
+	<map>
 
-1367530068 /home/christian/Dropbox/Projekte/networking/include//net/server.hpp
+1370859273 /home/christian/Dropbox/Projekte/networking/include//net/server.hpp
 	<set>
 	<map>
 	<cstdint>
 	<json/json.hpp>
 	<net/link.hpp>
 	<net/common.hpp>
+	<net/callbacks.hpp>
 
 1367500943 source:/home/christian/Dropbox/Projekte/networking/src/json/json.cpp
 	<json/json.hpp>
+
+1370856932 /home/christian/Dropbox/Projekte/networking/include//net/callbacks.hpp
+	<net/common.hpp>
+
+1370855944 source:/home/christian/Dropbox/Projekte/networking/src/net/client.cpp
+	<net/client.hpp>
+
+1370859229 source:/home/christian/Dropbox/Projekte/networking/src/net/server.cpp
+	<net/server.hpp>
+
+1370856696 source:/home/christian/Dropbox/Projekte/networking/src/net/link.cpp
+	<net/link.hpp>
 

@@ -29,12 +29,12 @@ SOFTWARE.
 #include "commands.hpp"
 
 ChatClient::ChatClient(std::string const & ip, std::uint16_t const port)
-    : net::Client<ChatClient>() {
+    : net::Client() {
 
-    this->callbacks[commands::LOGIN_RESPONSE]   = &ChatClient::login;
-    this->callbacks[commands::LOGOUT_RESPONSE]  = &ChatClient::logout;
-    this->callbacks[commands::MESSAGE_RESPONSE] = &ChatClient::message;
-    this->callbacks[commands::USERLIST_UPDATE]  = &ChatClient::update;
+    this->attach(commands::LOGIN_RESPONSE, &ChatClient::login);
+    this->attach(commands::LOGOUT_RESPONSE, &ChatClient::logout);
+    this->attach(commands::MESSAGE_RESPONSE, &ChatClient::message);
+    this->attach(commands::USERLIST_UPDATE, &ChatClient::update);
 
     this->authed = false;
     this->connect(ip, port);

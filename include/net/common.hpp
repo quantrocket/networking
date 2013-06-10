@@ -33,6 +33,7 @@ SOFTWARE.
 #include <queue>
 #include <mutex>
 #include <thread>
+#include <map>
 
 namespace net {
 
