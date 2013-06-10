@@ -94,6 +94,8 @@ namespace net {
                     std::cerr << "Worker from " << ip << " is blocked"
                               << std::endl;
                 } else {
+                    // create worker
+                    // @note: is automatically added to the worker list
                     new Worker(*this, *next_link);
                 }
             } else {

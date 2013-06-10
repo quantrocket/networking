@@ -44,14 +44,15 @@
 		<Unit filename="example/chatserver.hpp" />
 		<Unit filename="example/commands.hpp" />
 		<Unit filename="example/main.cpp" />
-		<Unit filename="example2/index.php" />
-		<Unit filename="example2/module/webclient.cpp" />
-		<Unit filename="example2/module/webclient.hpp" />
 		<Unit filename="include/json/json.hpp" />
+		<Unit filename="include/net/callbacks.hpp" />
 		<Unit filename="include/net/client.hpp" />
 		<Unit filename="include/net/common.hpp" />
 		<Unit filename="include/net/link.hpp" />
 		<Unit filename="include/net/server.hpp" />
+		<Unit filename="src/net/client.cpp" />
+		<Unit filename="src/net/link.cpp" />
+		<Unit filename="src/net/server.cpp" />
 		<Extensions>
 			<code_completion />
 			<debugger />
