@@ -58,4 +58,4 @@ I was thinking about the following cancled changes, but I cannot see it's necess
 I am thinking of the following possible changes:
 - Use pointers for internal JSON-data stead of common variables. This might decrease the needed memory but might also decrease the execution speed a bit. 
 - JSON is just one possibility for serialization. There might be a common interface for several kinds of serialization. Each actual implementation of this abstract serialization might be handled by the server and clients.
-
+- Possibility to use a binary protocol. So the server/client structure is either using a text-protocol (including serialization) or a binary protocol. A problem about binary protocols might be endianess and byte size of primitive data. To make the code most flexible, text- and binary-protocols should be based on a common interface.
