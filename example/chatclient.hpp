@@ -4,7 +4,7 @@ Copyright (c) 2013 Christian Glöckner <cgloeckner@freenet.de>
 This file is part of the networking module:
     https://github.com/cgloeckner/networking
 
-It offers a json-based networking framework for games and other software.
+It offers a tcp-based server-client framework for games and other software.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -33,17 +33,19 @@ SOFTWARE.
 
 #include <net/client.hpp>
 
-class ChatClient: public net::Client {
+#include "commands.hpp"
+
+class ChatClient: public net::Client<ChatProtocol> {
 
     protected:
         std::map<net::ClientID, std::string> users;
 
-        void login(json::Var& data);
-        void message(json::Var& data);
-        void logout(json::Var& data);
-        void update(json::Var& data);
+        void login(ChatProtocol & data);
+        void message(ChatProtocol & data);
+        void logout(ChatProtocol & data);
+        void update(ChatProtocol & data);
 
-        void fallback(json::Var& data);
+        void fallback(ChatProtocol& data);
 
     public:
         ChatClient(std::string const & ip, std::uint16_t const port);

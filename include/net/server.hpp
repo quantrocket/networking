@@ -4,7 +4,7 @@ Copyright (c) 2013 Christian Glöckner <cgloeckner@freenet.de>
 This file is part of the networking module:
     https://github.com/cgloeckner/networking
 
-It offers a json-based networking framework for games and other software.
+It offers a tcp-based server-client framework for games and other software.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -33,15 +33,15 @@ SOFTWARE.
 #include <map>
 #include <cstdint>
 
-#include <json/json.hpp>
+#include <SFML/Network.hpp>
 
-#include <net/link.hpp>
 #include <net/common.hpp>
 #include <net/callbacks.hpp>
 
 namespace net {
 
     // prototyped for Worker class
+    template <typename Protocol>
     class Server;
 
     /// ID for logically grouped clients
@@ -53,28 +53,24 @@ namespace net {
      *  by a worker. This worker contains the client ID, the TCP link and a
      *  reference to the related server.
      */
+    template <typename Protocol>
     class Worker {
-        friend class Server;
+        friend class Server<Protocol>;
 
         protected:
             /// client ID
             ClientID id;
             /// related server
-            Server& server;
+            Server<Protocol>& server;
             /// TCP link to the client
-            tcp::Link& link;
+            sf::TcpSocket link;
 
             /// Disconnects the worker
             virtual void disconnect();
 
         public:
             /// Constructor
-            /**
-             * This creates a new worker at the related server dealing with the
-             *  given TCP link. It will automatically retrieve the next valid
-             *  client ID and start the necessary Threads
-             */
-            Worker(Server & server, tcp::Link & link);
+            Worker(Server<Protocol> & server);
 
             /// Destructor
             /**
@@ -89,7 +85,7 @@ namespace net {
              *  @return true if online
              */
             virtual inline bool isOnline() {
-                return this->link.isOnline();
+                return (this->link.getRemoteAddress() != sf::IpAddress::None);
             }
 
             /// Set of groups this worker was assigned to
@@ -103,55 +99,46 @@ namespace net {
      * The server handles all clients using Threads. It can handle clients
      *  until a given, fixed maximum or more, if a maximum of -1 is given.
      *  Also it provides banning and unbanning IPs to refuse clients. The
-     *  server contains an incomming queue with received bundles for all
-     *  workers and an outgoing queue with bundles ready for sending to a
-     *  worker.
+     *  server contains an incomming queue with received data for all workers
+     *  and an outgoing queue with data ready for sending to a worker.
      */
-    class Server: public CallbackManager2<CommandID, json::Var &, ClientID const> {
-        friend class Worker;
+    template <typename Protocol>
+    class Server: public CallbackManager<CommandID, Protocol &> {
+        friend class Worker<Protocol>;
 
         protected:
             /// Listener for accepting clients
-            tcp::Listener listener;
-            /// Thread for accepting-loop
+            sf::TcpListener listener;
+            /// Threads
             std::thread accepter;
-            /// Thread for sending-loop
-            std::thread sender;
-            /// Thread for receiving-loop
-            std::thread receiver;
+            std::thread networker;
+            std::thread handler;
             /// Maximum number of clients (-1 = infinite)
             std::int16_t max_clients;
             /// Next worker's ID
             ClientID next_id;
             /// Structure of all workers keyed by their IDs
-            std::map<ClientID, Worker*> workers;
-            /// Mutex for next_id and workers
-            std::mutex workers_mutex;
+            std::map<ClientID, Worker<Protocol>*> workers;
             /// Set of blocked IPs
             std::set<std::string> ips;
-            /// Mutex for ips
-            std::mutex ips_mutex;
-            /// Queue of incomming objects
-            utils::SyncQueue<json::Var> in;
-            /// Queue of outgoing objects
-            utils::SyncQueue<json::Var> out;
-
             /// Logically grouped clients
             std::map<GroupID, std::set<ClientID>> groups;
-            /// Mutex for groups
+            /// Serveral mutex stuff
+            std::mutex workers_mutex;
+            std::mutex ips_mutex;
             std::mutex groups_mutex;
+            /// Queues
+            utils::SyncQueue<Protocol> in;
+            utils::SyncQueue<Protocol> out;
 
-            /// Accepter-loop
+            /// Send / Receive next Data
+            bool sendNext();
+            bool receiveNext(ClientID const clientid, sf::TcpSocket & link);
+
+            /// Threaded Loops
             void accept_loop();
-            /// Sending-loop
-            void send_loop();
-            /// Receiving-loop
-            void recv_loop();
-            /// Handle-loop
+            void network_loop();
             void handle_loop();
-
-            /// Thread for handle-loop
-            std::thread handler;
 
         public:
             /// Constructor
@@ -173,7 +160,7 @@ namespace net {
              *  It will start the accepter-loop as a Thread.
              *  @param port: local port number
              */
-            void start(std::uint16_t const port);
+            bool start(std::uint16_t const port);
 
             /// Returns whether the server is online
             /**
@@ -181,7 +168,7 @@ namespace net {
              *  @return true if online
              */
             inline bool isOnline() {
-                return this->listener.isOnline();
+                return (this->listener.getLocalPort() != 0);
             }
 
             /// Shutdown the server safely
@@ -232,29 +219,19 @@ namespace net {
                 this->ips_mutex.unlock();
             }
 
-            /// Return the next bundle
-            /**
-             * This will return a "bundle" containing the source client's id
-             *  and the original data as object.
-             *  @return next bundle
-             */
-            inline json::Var pop() {
-                return this->in.pop();
-            }
-
             /// Push an object to a worker
             /**
-             * This will push an object to a given worker. The object is
-             *  serialized and send through the socket. At the other side it
-             *  can be popped to obtain the data.
+             * This will push an object to a given worker. Then the object is
+             *  sent through the socket. At the other side it can be popped to
+             *  obtain the data.
              *  @param object: an object to send
              *  @param id: destination's client ID
              */
-            inline void push(json::Var const & object, ClientID const id) {
-                json::Var wrap;
-                wrap["source"] = id;
-                wrap["payload"] = object;
-                this->out.push(wrap);
+            inline void push(Protocol & object, ClientID const id) {
+                // Set target client
+                object.client = id;
+                // Push to outgoing queue
+                this->out.push(object);
             }
 
             /// Push an object to all workers
@@ -264,7 +241,7 @@ namespace net {
              *  more speed then notifying all clients by single calls.
              *  @param object: object to send
              */
-            void push(json::Var const & object);
+            void push(Protocol & object);
 
             /// Push an object to some workers
             /**
@@ -277,7 +254,7 @@ namespace net {
              *  @param object: object to send
              *  @param group: group id to use for client notification
              */
-            void pushGroup(json::Var const & object, GroupID const group);
+            void pushGroup(Protocol & object, GroupID const group);
 
             /// Add a client to a group
             /**
@@ -315,6 +292,375 @@ namespace net {
             bool hasGroup(GroupID const group);
 
     };
+
+    template <typename Protocol>
+    Worker<Protocol>::Worker(Server<Protocol> & server)
+        : server(server) {
+    }
+
+    template <typename Protocol>
+    Worker<Protocol>::~Worker() {
+        this->link.disconnect();
+    }
+
+    template <typename Protocol>
+    void Worker<Protocol>::disconnect() {
+        this->server.disconnect(this->id);
+    }
+
+    // ------------------------------------------------------------------------
+
+    template <typename Protocol>
+    Server<Protocol>::Server(std::int16_t const max_clients)
+        : CallbackManager<CommandID, Protocol &>()
+        , max_clients(max_clients)
+        , next_id(0) {
+        // Workaround for Tcp Socket Crash
+        utils::SocketCrashWorkaround();
+    }
+
+    template <typename Protocol>
+    Server<Protocol>::~Server() {
+        if (this->isOnline()) {
+            this->disconnect();
+        }
+    }
+
+    template <typename Protocol>
+    void Server<Protocol>::accept_loop() {
+        while (this->isOnline()) { 
+            // Check for next Client
+            auto next = new Worker<Protocol>(*this);
+            auto status = this->listener.accept(next->link);
+            if (status != sf::Socket::Done) {
+                // Nothing happened
+                utils::delay(25);
+                delete next;
+                continue;
+            }
+            next->link.setBlocking(false);
+            
+            // Check number of clients
+            this->workers_mutex.lock();
+            auto number = this->workers.size();
+            this->workers_mutex.unlock();
+            std::string hostname = next->link.getRemoteAddress().toString();
+            std::uint16_t port = next->link.getRemotePort();
+            if (this->max_clients != -1 && number >= this->max_clients) {
+                // Server is full
+                next->link.disconnect();
+                delete next;
+                std::cerr << "New client from " << hostname << ":" << port
+                          << " was refused, because the maximum limit of"
+                          << " clients has been reached" << std::endl
+                          << std::flush;
+                utils::delay(50);
+                continue;
+            }
+            
+            // Check if blocked
+            this->ips_mutex.lock();
+            bool blocked = (this->ips.find(hostname) != this->ips.end());
+            this->ips_mutex.unlock();
+            if (blocked) {
+                // This host is banned
+                next->link.disconnect();
+                delete next;
+                std::cerr << "Client from banned host " << hostname << ":"
+                          << port << " was refused" << std::endl << std::flush;
+                continue;
+            }
+
+            // Assign ClientID
+            this->workers_mutex.lock();
+            ClientID id = this->next_id;
+            sf::Packet packet;
+            packet << id;
+            status = next->link.send(packet);
+            if (status == sf::Socket::Done) {
+                // Add to Server
+                next->id = id;
+                this->workers[id] = next;
+                this->next_id++;
+                std::cerr << "Client #" << id << " accepted from " << hostname
+                          << ":" << port << std::endl << std::flush;
+            } else {
+                next->link.disconnect();
+                delete next;
+            }
+            this->workers_mutex.unlock();
+        }
+    }
+
+    template <typename Protocol>
+    bool Server<Protocol>::sendNext() {
+        // Pick next from outgoing queue
+        Protocol object;
+        if (!this->out.pop(object)) {
+            return false;
+        }
+        // Get Worker's Link
+        this->workers_mutex.lock();
+        auto node = this->workers.find(object.client);
+        bool found = (node != this->workers.end());
+        this->workers_mutex.unlock();
+        if (!found || node->second == NULL) {
+            std::cerr << "Worker #" << object.client << " was not found"
+                      << std::endl << std::flush;
+            return false;
+        }
+        sf::TcpSocket & link = node->second->link;
+        
+        // Send to Client
+        if (!object.send(link)) {
+            if (!node->second->isOnline()) {
+                // Pipe broken
+                link.disconnect();
+                this->workers_mutex.lock();
+                delete node->second;
+                this->workers.erase(node);
+                std::cerr << "Connection to the client #" << object.client
+                          << " was killed" << std::endl << std::flush;
+                this->workers_mutex.unlock();
+            }
+            return false;
+        }
+        return true;
+    }
+
+    template <typename Protocol>
+    bool Server<Protocol>::receiveNext(ClientID const clientid,
+                                        sf::TcpSocket & link) {
+        // Try to receive next
+        Protocol object;
+        if (!object.receive(link)) {
+            // Cannot receive
+            if (!isOnline()) {
+                // Pipe broken
+                link.disconnect();
+                this->workers_mutex.lock();
+                auto node = this->workers.find(clientid);
+                if (node != this->workers.end()) {
+                    delete node->second;
+                    this->workers.erase(node);
+                    std::cerr << "Connection to the client #" << clientid
+                              << " was killed" << std::endl << std::flush;
+                }
+                this->workers_mutex.unlock();
+            }
+            return false;
+        }
+        // Set Source ClientID
+        object.client = clientid;
+        // Push to incomming queue
+        this->in.push(object);
+        return true;
+    }
+
+    template <typename Protocol>
+    void Server<Protocol>::network_loop() {
+        do {
+            // Send all objects
+            while (this->sendNext());
+            // Receive from all workers
+            this->workers_mutex.lock();
+            auto workers = this->workers;
+            this->workers_mutex.unlock();
+            for (auto node = workers.begin(); node != workers.end(); node++) {
+                while (this->receiveNext(node->first, node->second->link)) {}
+            }
+            // delay a bit
+            utils::delay(25);
+        } while (this->isOnline());
+    }
+
+    template <typename Protocol>
+    void Server<Protocol>::handle_loop() {
+        do {
+            // Pick next from incomming queue
+            Protocol object;            
+            if (!this->in.pop(object)) {
+                // Nothing to do
+                utils::delay(15);
+                continue;
+            }
+            // Trigger callback method
+            this->trigger(object.command, object);
+        } while (this->isOnline());
+    }
+
+    template <typename Protocol>
+    bool Server<Protocol>::start(std::uint16_t const port) {
+        if (this->isOnline()) {
+            // already listening
+            return true;
+        }
+        // Start listener
+        auto status = this->listener.listen(port);
+        if (status != sf::Socket::Done) {
+            return false;
+        }
+        this->listener.setBlocking(false);
+        // Start threads
+        this->accepter = std::thread(&Server<Protocol>::accept_loop, this);
+        this->networker = std::thread(&Server<Protocol>::network_loop, this);
+        this->handler  = std::thread(&Server<Protocol>::handle_loop, this);
+        
+        return true;
+    }
+
+    template <typename Protocol>
+    void Server<Protocol>::shutdown() {
+        // wait until outgoing queue is empty
+        // @note: data that is pushed while this queue is waiting might be lost
+        while (this->isOnline() && !this->out.isEmpty()) {
+            utils::delay(15);
+        }
+        this->disconnect();
+    }
+
+    template <typename Protocol>
+    void Server<Protocol>::disconnect() {
+        // shutdown listener
+        this->listener.close();
+        // shutdown threads (try-catched, they might have been stopped, yet)
+        try {
+            this->accepter.join();
+        } catch (std::system_error const & se) {}
+        try {
+            this->networker.join();
+        } catch (std::system_error const & se) {}
+        try {
+            this->handler.join();
+        } catch (std::system_error const & se) {}
+        this->workers_mutex.lock();
+        // disconnect workers
+        for (auto node = this->workers.begin(); node != this->workers.end();
+             node++) {
+            if (node->second != NULL) {
+                delete node->second;
+                node->second = NULL;
+            }
+        }
+        this->workers_mutex.unlock();
+        this->groups.clear();
+        this->workers.clear();
+        this->next_id = 0;
+        // clear queue
+        this->out.clear();
+        this->in.clear();
+    }
+
+    template <typename Protocol>
+    void Server<Protocol>::disconnect(ClientID const id) {
+        this->workers_mutex.lock();
+        auto node = this->workers.find(id);
+        if (node != this->workers.end()) {
+            // remove worker from groups
+            auto grouplist = node->second->groups;
+            for (auto n = grouplist.begin(); n != grouplist.end(); n++) {
+                this->ungroup(id, *n);
+            }
+            // delete worker
+            delete node->second;
+            this->workers.erase(node);
+        }
+        this->workers_mutex.unlock();
+    }
+
+    template <typename Protocol>
+    void Server<Protocol>::push(Protocol & object) {
+        this->workers_mutex.lock();
+        auto workers = this->workers;
+        this->workers_mutex.unlock();
+        for (auto node = workers.begin(); node != workers.end(); node++) {
+            if (node->second != NULL && node->second->isOnline()) {
+                // Set Target ClientID
+                object.client = node->first;
+                this->out.push(object);
+            }
+        }
+    }
+
+    template <typename Protocol>
+    void Server<Protocol>::pushGroup(Protocol & object, GroupID const group) {
+        this->groups_mutex.lock();
+        auto node = this->groups.find(group);
+        if (node == this->groups.end()) {
+            // group does not exist
+            this->groups_mutex.unlock();
+            return;
+        }
+        // push to all group's clients
+        for (auto n = node->second.begin(); n != node->second.end(); n++) {
+            this->push(object, *n);
+        }
+        this->groups_mutex.unlock();
+    }
+
+    template <typename Protocol>
+    void Server<Protocol>::group(ClientID const client, GroupID const group) {
+        this->groups_mutex.lock();
+        auto node = this->groups.find(group);
+        if (node == this->groups.end()) {
+            // group does not exist, yet
+            this->groups[group] = std::set<ClientID>();
+            this->groups[group].insert(client);
+        } else {
+            // group does already exist
+            node->second.insert(client);
+        }
+        // add this group to the clients groups
+        auto n = this->workers.find(client);
+        if (n != this->workers.end()) {
+            n->second->groups.insert(group);
+        }
+        this->groups_mutex.unlock();
+    }
+
+    template <typename Protocol>
+    void Server<Protocol>::ungroup(ClientID const client,
+                                    GroupID const group) {
+        this->groups_mutex.lock();
+        auto node = this->groups.find(group);
+        if (node == this->groups.end()) {
+            // group does not exist
+            this->groups_mutex.unlock();
+            return;
+        }
+        // remove from group
+        node->second.erase(client);
+        // add this group to the clients groups
+        auto n = this->workers.find(client);
+        if (n != this->workers.end()) {
+            n->second->groups.erase(group);
+        }
+        this->groups_mutex.unlock();
+    }
+
+    template <typename Protocol>
+    std::set<ClientID> Server<Protocol>::getClients(GroupID const group) {
+        this->groups_mutex.lock();
+        auto node = this->groups.find(group);
+        if (node == this->groups.end()) {
+            // group does not exist
+            this->groups_mutex.unlock();
+            return std::set<ClientID>();
+        }
+        auto g = node->second;
+        this->groups_mutex.unlock();
+        // return group
+        return g;
+    }
+
+    template <typename Protocol>
+    bool Server<Protocol>::hasGroup(GroupID const group) {
+        this->groups_mutex.lock();
+        auto node = this->groups.find(group);
+        bool has = (node != this->groups.end());
+        this->groups_mutex.unlock();
+        return has;
+    }
 
 }
 

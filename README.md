@@ -1,61 +1,79 @@
-# JSON-Based Networking Framework
+# TCP-based Server-Client Framework
 
-This file is part of the networking module https://github.com/cgloeckner/networking. The project offers a networking framework for games and other software using json-styled data. It's main purpose is to integrate into my own game project. An integration into FLARE by Clint Bellanger is up to him. Unfortunally the flare code seems too confusing to me, yet.
+This file is part of the networking module at https://github.com/clgoeckner/networking. The project offers a TCP-based server-client framework for games and other applications of networking technology. It's main purpose is the integration into my own game project. But feel free to integrate it into your own project as well :) 
 
 The source code is licenced under MIT. See COPYING for further information.
 
-Kind regards, Christian Glöckner
+# Features
 
-# JSON over plain data
-
-The first approach for my networking framework was about using plain data. I collected primitive values in structures (called "events") and sent them over the network. For correct identification it was necessary to give unique id to each event type and switch them after receiving. This whole ugly switching and typecasting can be reduced when using serialized data. Because of it's low overhead I decided to use JSON! It is also ready-to-use for maintenance and easy to read for humans.
+ - Multithreaded Server-Client architecture
+ - TCP-based communication
+ - Multi-Plattform by modern C++11 and SFML features
+ - Limit number of clients (or keep open-end)
+ - Block / Unlock clients based on their IP-address
+ - Grouping clients to logical partitions
+ - Easy-to-use: it's header-only!
+ - Flexible: Use your own protocol workflow
 
 # Dependencies
 
-- C++11
-- SDL_net (currently customized for version 1.2)
+ - C++11
+ - SFML 2.0
 
-# Current Limitations
+# How to use it
 
-Currently there is no UDP support. The server-client code is completly based on TCP only. I'm not shure whether I already need UDP, so it will stay disabled for a non-specified while. Also multiple endianness is not supported. Consider this when shipping your application to different plattforms.
+First I recommend to view the example given at `example/`. There you can find a very simple console-based chatroom, based on this framework. Using it in your own application is quiet easy, because it's a header-only framework!
 
-Please pay attention to use `float` for floating point variables in the context of JSON Objects. Currenty `double` or `long double` are not supported, because some decimal place might be cut off when serializing with `std::to_string`.
+ 1. Include the header files. These can be found inside the `include/net/`-directory. All classes and stuff are assigned to the namespace `net`. So you won't not mess up your global namespace :-) 
+ 2. Define your protocol! The framework does not force you to use a predefined protocol. It does not offer such a protocol, at all :D Just implement your `Protocol`-class and be your own master. You can derive it from `net::BaseProtocol` and override the `send` and `receive` methods. By writing your own `send` and `receive` workflow, you can manage your communication at a basic level. You can define `CommandID`s and put all the data together you need in your application. Remember: If you choose a binary protocol, check for possible endianess problems and problems referring to 32- and 64-bit systems. In order to the second problem, I recommend to use the integer-types declared in `<cstdint>`.
+ 3. After finishing your protocol it's time to implement your servers and clients. Just derive from `net::Server` and `net::Client` and remember to use your protocol class as the template parameter. Then you can defined callbacks for each of your `CommandID`'s and link it to a method. Remember to implement your `fallback` handle. It is called if no other suitable callback was found.
+ 4. Compile and run!
+ 
+The example application can be compiled by using:
 
-# Why Serialization
+    g++ -o chatroom example/*.cpp -std=c++0x -pthread -I./include/ -lsfml-system -lsfml-network
 
-Of course: serialization causes overhead which might be avoid by sending old-fashon binary data through a socket.
+I testet this with GCC 4.6.4 on GNU/Linux Ubuntu 12.04 (32-bit) and SFML 2.0. Just mention to:
 
-One reason against "plain binary data" was the following: When sending e.g. different structs, I need to send some kind of identifier telling the opposite site which actual type is sent. The byte size of the struct type should be determined by this identifier. Problem: different size of datatypes. A solution might be the fixed size integer types supported by Boost and C++11. In addition to this problem there might be differences in endianess. Problem: different order of bytes within a data structure. A possible solution might be more-detailed work with different endianessess. Another reason for me was the following: If I send a structure containing several data I'd like to have a clear interface for "pushing" and "pulling" such packages to or from the network. This implies the use of a base package class as parent for all other packages, inherited from this one. Then I'd need to switch the package ident and cast my structure to another type. This also causes (small) overhead and makes the code extremly ugly, because this is going to be a framework! So I don't know which actual packages are provided by the future application. So the part of producing packages from socket data (e.g. using the factory pattern) must be separated from the framework. Elsewise the framework would destroy it's own flexibility. But this production has to be part of a framework. As a programmer using this framework I don't like to implement essential parts (like producing actual packages from the socket data). This should be done by the framework, elsewise I'd use another one which fits my needs even more.
+ - Use C++11 by `-std=c++0x`.
+ - Enable threading by `-pthread`.
+ - Add the `include/` directory to the include search path by `-I./include/`.
+ - Link SFML by `-lsfml-system` and `-lsfml-network`.
 
-But there are more problems: after reading data I need to create the new structure to obtain the data. A solution might be using some `alloc`/`malloc`/`calloc`. But this will force to use `free` instead of `delete` - the compiler isn't warning this at all. Memory management is a difficult topic. But forcing the "user" of the framework (that means a programmer) to use "sometimes" `free` and "sometimes" `delete` is bad design, in my opinion. It's confusion and error-prone. This should be goals to avoid with a "modern" framework using some OOP-principles.
+# Current Workarounds
 
-Currently I don't to how to get rid of this problems without using serialization.
+ - Sometimes the application crashs when trying to send data using a TCP socket
+    that is already closed by remote. This is a bug within SFML. I used a
+    workaround to disable this bad behavior, by using `signal.h`.
+    See http://en.sfml-dev.org/forums/index.php?topic=9092.msg61423#msg61423
 
-# Example
+# Known Bugs
 
-You can find a server-client-based chatroom example in the directory `example/`. It shoulds the basic usage of a possible multiuser chatroom.
+ - Blocking users by DNS does not work. E.g. block "127.0.0.1" instead of
+    "localhost". I guess this also does not work for unblocking by DNS.
 
-# Building
+# (Maybe) Frequently Asked Questions
 
-Note: This Framework is easy to use: include the header files and add the cpp-files to your compilers search path.
+Q: This framework is TCP-only. Is there any UDP-support planned?
 
-Build with Code::Blocks is very simple. Just use `networking.cbp` and build as you always do. If you are using GCC without an IDE you can building using the following line.
+A: Personally, I don't need UDP, yet. So I designed this framework as TCP-only and have no real plans to enable UDP support. If you like to use UDP within this framework, feel free to fork this framework.
 
-    g++ -o chatroom example/*.cpp src/net/*.cpp -lSDL_net --std=c++0x -pthread -I./include/
+--
 
-I tested it using GNU/Linux Ubuntu 12.04 32-Bit and gcc 4.6.3. But it should work with MinGW as-well. Just remember too add e.g. `-lmingw32` (I had to add when compiling using Wine on my 32-bit machine.)
+Q: This framework is built on C++11. My compiler does not support C++11, yet. Can I use this framework anyway?
 
-# Cancled Changes
+A: Yes and no. You need to modify some of the framework's parts by using Boost. Else you cannot use it, sorry. But feel free to fork this framework by using even more of Boost.
 
-I was thinking about the following cancled changes, but I cannot see it's necessarity, yet:
-- UDP support is not implemented. The server-client structure and the serialization-based communication needs to be redesigned when using UDP. That's too much work to too less benefit.
-- Using `double` inside the JSON-objects is wasting memory. See furthur limitations for more information.
-- Peer-to-peer structure is not used by me, yet. I don't have any experience implementing such a design. Feel free to offer your implementation of peer-to-peer or other networking designs.
-- Use Boost::Asio instead SDL_net. I'm not sure whether I really "need" this. In fact I'm not going to developing a MMORPG using this framework. But if you need more performance within the framework, feel free to offer your implementation (see `link.hpp` and `link.cpp`) using Boost::Asio.
+--
 
-# Possible Changes
+Q: This framework is built on SFML. I'm not using this I don't want to. How to use the framework in this case?
 
-I am thinking of the following possible changes:
-- Use pointers for internal JSON-data stead of common variables. This might decrease the needed memory but might also decrease the execution speed a bit. 
-- JSON is just one possibility for serialization. There might be a common interface for several kinds of serialization. Each actual implementation of this abstract serialization might be handled by the server and clients.
-- Possibility to use a binary protocol. So the server/client structure is either using a text-protocol (including serialization) or a binary protocol. A problem about binary protocols might be endianess and byte size of primitive data. To make the code most flexible, text- and binary-protocols should be based on a common interface.
+A: I decided using SFML because of it's high level of features. So if you don't want to work with SFML, I'm sorry. But SFML is really easy, just in case you mistrust your skills.
+
+--
+
+Q: What type of communication is supported?
+
+A: This is up to you! The server- and client-classes are template-based and are waiting for your protocol implementation. Everything is possible: JSON, XML or even your own binary protocol formate.
+
+

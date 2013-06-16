@@ -92,67 +92,6 @@ namespace net {
 
     };
 
-    /// CallbackManager
-    /** This template class is used to bind method pointers to some kind of
-     *  identifier. So methods can be called by using a given identifier
-     *  and some data. Currently only one type of signature is allowed:
-     *      void Foo::bar(Param & data, Param2 & data2);
-     *
-     *  Ident is the template type for the indentifiers (e.g. int)
-     *  Param is the template type for the data, given to the methods
-     *  Param2 is the template type for the 2nd data, given to the methods
-     */
-    template <typename Ident, typename Param, typename Param2>
-    class CallbackManager2 {
-
-        protected:
-            /// callback map
-            std::map<Ident, void (CallbackManager2::*)(Param, Param2)> callbacks;
-            /// fallback handle
-            virtual void fallback(Param param, Param2 param2) = 0;
-
-        public:
-            /// constructor
-            CallbackManager2() {
-            }
-
-            /// register callback
-            template <typename Ptr>
-            void attach(Ident const ident, Ptr method) {
-                if (method == NULL) {
-                    return;
-                }
-                // "fix" pointer type
-                auto tmp = reinterpret_cast<
-                    void (CallbackManager2<Ident, Param, Param2>::*)
-                    (Param, Param2)
-                >(method);
-                this->callbacks[ident] = tmp;
-            }
-            /// unregister callback
-            void detach(Ident const ident) {
-                auto node = this->callbacks.find(ident);
-                if (node != this->callbacks.end()) {
-                    this->callbacks.erase(node);
-                }
-            }
-            /// trigger callback
-            void trigger(Ident const ident, Param param, Param2 param2) {
-                auto node = this->callbacks.find(ident);
-                if (node != this->callbacks.end()) {
-                    auto cb = node->second;
-                    if (cb != NULL) {
-                        // execute callback
-                        (this->*cb)(param, param2);
-                        return;
-                    }
-                }
-                // use fallback handle
-                this->fallback(param, param2);
-            }
-
-    };
-
 }
 
 #endif // NET_CALLBACKS_INCLUDE_GUARD

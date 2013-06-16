@@ -4,7 +4,7 @@ Copyright (c) 2013 Christian Glöckner <cgloeckner@freenet.de>
 This file is part of the networking module:
     https://github.com/cgloeckner/networking
 
-It offers a json-based networking framework for games and other software.
+It offers a tcp-based server-client framework for games and other software.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -26,119 +26,95 @@ SOFTWARE.
 */
 
 #include "chatclient.hpp"
-#include "commands.hpp"
 
 ChatClient::ChatClient(std::string const & ip, std::uint16_t const port)
-    : net::Client() {
-
+    : net::Client<ChatProtocol>() {
+    // Assign Callback Methods
     this->attach(commands::LOGIN_RESPONSE, &ChatClient::login);
     this->attach(commands::LOGOUT_RESPONSE, &ChatClient::logout);
     this->attach(commands::MESSAGE_RESPONSE, &ChatClient::message);
     this->attach(commands::USERLIST_UPDATE, &ChatClient::update);
 
     this->authed = false;
-    this->connect(ip, port);
-    std::cout << "Client started" << std::endl;
+    if (this->connect(ip, port)) {
+        std::cout << "Client started" << std::endl;
+    }
 }
 
 ChatClient::~ChatClient() {
-    this->link.close();
+    this->link.disconnect();
 }
 
-void ChatClient::login(json::Var& data) {
-    net::ClientID id;
-    std::string username;
-    bool success;
-    if (!data["id"].get(id) || !data["username"].get(username)
-        || !data["success"].get(success)) {
-        return;
-    }
-    if (!this->authed && id == this->id) {
-        if (success) {
-            this->username = username;
-            this->authed = success;
-            this->users[id] = username;
-            std::cout << "You entered the chat as '" << username << "'"
-                      << std::endl;
-        }
+void ChatClient::login(ChatProtocol & data) {
+    if (!this->authed && data.userid == this->id && data.success) {
+        this->username           = data.username;
+        this->authed             = true;
+        this->users[data.userid] = data.username;
+        std::cout << "You entered the chat as '" << data.username << "'"
+                  << std::endl;
     }
 }
 
-void ChatClient::message(json::Var& data) {
-    net::ClientID id;
-    std::string text;
-    if (!data["id"].get(id) || !data["text"].get(text)) {
-        return;
-    }
+void ChatClient::message(ChatProtocol & data) {
     if (this->authed) {
-        auto node = this->users.find(id);
+        auto node = this->users.find(data.userid);
         if (node == this->users.end()) {
-            // not found (ignore event)
+            // author not found
             return;
         }
-        std::cout << "<" << (node->second) << "> " << text << std::endl;
+        std::cout << "<" << (node->second) << "> " << data.text << std::endl;
     }
 }
 
-void ChatClient::logout(json::Var& data) {
-    net::ClientID id;
-    if (!data["id"].get(id)) {
-        return;
-    }
-    if (this->authed && id == this->id) {
+void ChatClient::logout(ChatProtocol & data) {
+    if (this->authed && data.userid == this->id) {
         std::cout << "You are leaving the chat." << std::endl;
         this->authed = false;
         this->username = "";
         this->users.clear();
-        this->link.close();
+        this->link.disconnect();
     }
 }
 
-void ChatClient::update(json::Var& data) {
-    bool add;
-    net::ClientID id;
-    std::string username;
-    if (!data["add"].get(add) || !data["id"].get(id) || !data["username"].get(username)) {
-        return;
-    }
-    if (add) {
+void ChatClient::update(ChatProtocol & data) {
+    if (data.add_user) {
         // add to userlist
-        this->users[id] = username;
-        std::cout << "'" << username << "' was added to the userlist."
+        this->users[data.userid] = data.username;
+        std::cout << "'" << data.username << "' was added to the userlist."
                   << std::endl;
     } else {
         // remove from userlist
-        auto node = this->users.find(id);
+        auto node = this->users.find(data.userid);
         if (node == this->users.end()) {
             return; // not found (ignored)
         }
-        std::cout << "'" << (node->second) << "' was remove from the userlist."
+        std::cout << "'" << (node->second) << "' was removed from the userlist."
                   << std::endl;
         this->users.erase(node);
     }
 }
 
-void ChatClient::fallback(json::Var& data) {
-    std::cout << "Unknown case : " << data.dump() << std::endl;
+void ChatClient::fallback(ChatProtocol & data) {
+    std::cout << "Unknown command #" << data.command << std::endl;
 }
 
 void ChatClient::request_login(std::string const & username) {
-    json::Var request;
-    request["command"] = commands::LOGIN_REQUEST;
-    request["username"] = username;
+    ChatProtocol request;
+    request.command  = commands::LOGIN_REQUEST;
+    request.username = username;
     this->push(request);
 }
 
 void ChatClient::request_logout() {
-    json::Var request;
-    request["command"] = commands::LOGOUT_REQUEST;
+    ChatProtocol request;
+    request.command = commands::LOGOUT_REQUEST;
     this->push(request);
 }
 
 void ChatClient::request_message(std::string const & message) {
-    json::Var request;
-    request["command"] = commands::MESSAGE_REQUEST;
-    request["text"] = message;
+    ChatProtocol request;
+    request.command = commands::MESSAGE_REQUEST;
+    request.text = message;
     this->push(request);
 }
 

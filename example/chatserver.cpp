@@ -4,7 +4,7 @@ Copyright (c) 2013 Christian Glöckner <cgloeckner@freenet.de>
 This file is part of the networking module:
     https://github.com/cgloeckner/networking
 
-It offers a json-based networking framework for games and other software.
+It offers a tcp-based server-client framework for games and other software.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -26,16 +26,18 @@ SOFTWARE.
 */
 
 #include "chatserver.hpp"
-#include "commands.hpp"
 
 ChatServer::ChatServer(const std::uint16_t port)
-    : net::Server() {
+    : net::Server<ChatProtocol>(5) {
+    // Assign Callback Methods
     this->attach(commands::LOGIN_REQUEST, &ChatServer::login);
     this->attach(commands::LOGOUT_REQUEST, &ChatServer::logout);
     this->attach(commands::MESSAGE_REQUEST, &ChatServer::message);
 
-    this->start(port);
-    std::cout << "Server started" << std::endl;
+    if (this->start(port)) {
+        std::cout << "Server started" << std::endl;
+    }
+    this->block("127.0.0.1");
 }
 
 ChatServer::~ChatServer() {
@@ -43,98 +45,67 @@ ChatServer::~ChatServer() {
     std::cout << "Server stopped" << std::endl;
 }
 
- void ChatServer::login(json::Var & data, net::ClientID const id) {
+void ChatServer::login(ChatProtocol & data) {
     // seek id
-    auto node = this->users.find(id);
+    auto node = this->users.find(data.client);
     if (node != this->users.end()) {
         // loggin failed (user already logged in)
-        json::Var answer;
-        answer["command"] = commands::LOGIN_RESPONSE;
-        answer["success"] = false;
-        this->push(answer, id);
-        return;
-    }
-    std::string username;
-    if (!data["username"].get(username)) {
+        ChatProtocol answer;
+        answer.command = commands::LOGIN_RESPONSE;
+        answer.success = false;
+        this->push(answer, data.client);
         return;
     }
     // add user
-    this->users[id] = username;
-    this->group(id, 0); // add to group #0
+    this->users[data.client] = data.username;
+    this->group(data.client, 0); // add to group #0
     // loggin successful
-    json::Var answer;
-    answer["command"] = commands::LOGIN_RESPONSE;
-    answer["success"] = true;
-    answer["id"] = id;
-    answer["username"] = username;
-    this->push(answer, id);
+    ChatProtocol answer;
+    answer.command  = commands::LOGIN_RESPONSE;
+    answer.success  = true;
+    answer.userid   = data.client;
+    answer.username = data.username;
+    this->push(answer, data.client);
     node = this->users.begin();
     while (node != this->users.end()) {
-        if (node->first != id) {
+        if (node->first != data.client) {
             // send all user ids & names to this client
-            json::Var answer;
-            answer["command"] = commands::USERLIST_UPDATE;
-            answer["add"] = true;
-            answer["id"] = node->first;
-            answer["username"] = node->second;
-            this->push(answer, id);
+            ChatProtocol answer;
+            answer.command  = commands::USERLIST_UPDATE;
+            answer.add_user = true;
+            answer.userid   = node->first;
+            answer.username = node->second;
+            this->push(answer, data.client);
             // send this new user to all other clients
-            answer["id"] = id;
-            answer["username"] = username;
+            answer.userid   = data.client;
+            answer.username = data.username;
             this->push(answer, node->first);
         }
         node++;
     }
 }
 
-void ChatServer::message(json::Var & data, net::ClientID const id) {
-    std::string text;
-    if (!data["text"].get(text)) {
-        return;
-    }
+void ChatServer::message(ChatProtocol & data) {
     // seek id
-    auto node = this->users.find(id);
+    auto node = this->users.find(data.client);
     if (node == this->users.end()) {
         // user not logged in (ignore event)
         return;
     }
     // show message
-    std::cout << "<" << (node->second) << "> " << text << std::endl;
+    std::cout << "<" << (node->second) << "> " << data.text << std::endl;
 
-    /// Method2 #1: iterate through all clients
-    /*
-    // broadcast message to clients
-    node = this->users.begin();
-    while (node != this->users.end()) {
-        json::Var answer;
-        answer["command"] = commands::MESSAGE_RESPONSE;
-        answer["text"] = text;
-        answer["id"] = id;
-        this->push(answer, node->first);
-        node++;
-    }
-    */
-
-    /// Methode #2: send to all clients directly
-    /*
-    json::Var answer;
-    answer["command"] = commands::MESSAGE_RESPONSE;
-    answer["text"] = text;
-    answer["id"] = id;
-    this->push(answer);
-    */
-
-    /// Methode #3: send to all clients in the given group
-    json::Var answer;
-    answer["command"] = commands::MESSAGE_RESPONSE;
-    answer["text"] = text;
-    answer["id"] = id;
+    // send to all clients in the given group
+    ChatProtocol answer;
+    answer.command = commands::MESSAGE_RESPONSE;
+    answer.text    = data.text;
+    answer.userid  = data.client;
     this->pushGroup(answer, 0); // to group #0
 }
 
-void ChatServer::logout(json::Var& data, net::ClientID const id) {
+void ChatServer::logout(ChatProtocol & data) {
     // seek id
-    auto node = this->users.find(id);
+    auto node = this->users.find(data.client);
     if (node == this->users.end()) {
         // user not logged in (ignore event);
         return;
@@ -142,19 +113,19 @@ void ChatServer::logout(json::Var& data, net::ClientID const id) {
     std::string username = node->second;
     this->users.erase(node);
     // logout successful
-    json::Var answer;
-    answer["command"] = commands::LOGOUT_RESPONSE;
-    answer["id"] = id;
-    this->push(answer, id);
+    ChatProtocol answer;
+    answer.command = commands::LOGOUT_RESPONSE;
+    answer.userid  = data.client;
+    this->push(answer, data.client);
     node = this->users.begin();
     while (node != this->users.end()) {
-        if (node->first != id) {
+        if (node->first != data.client) {
             // send this new user to all other clients
-            json::Var answer;
-            answer["command"] = commands::USERLIST_UPDATE;
-            answer["add"] = false;
-            answer["id"] = id;
-            answer["username"] = username;
+            ChatProtocol answer;
+            answer.command  = commands::USERLIST_UPDATE;
+            answer.add_user = false;
+            answer.userid   = data.client;
+            answer.username = username;
             this->push(answer, node->first);
         }
         node++;
@@ -162,13 +133,13 @@ void ChatServer::logout(json::Var& data, net::ClientID const id) {
     // user is automatically removed from all groups when disconnecting
 }
 
-void ChatServer::fallback(json::Var& data, net::ClientID const id) {
-    std::cout << "Unknown case from #" << id << " : " << data.dump() << std::endl;
+void ChatServer::fallback(ChatProtocol & data) {
+    std::cout << "Unknown command #" << data.command << std::endl;
 }
 
 void ChatServer::request_logout() {
-    json::Var request;
-    request["command"] = commands::LOGOUT_REQUEST;
+    ChatProtocol request;
+    request.command = commands::LOGOUT_REQUEST;
     this->push(request);
 }
 

@@ -3,12 +3,7 @@ core
 chatroom
 doxygen.config
 *~
-json/*~
 include/*~
 include/net/*~
-include/json/*~
 example/*~
-obj/*
-obj/dev/*
-obj/stable/*
-networking.layout
+networking.*

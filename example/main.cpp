@@ -4,7 +4,7 @@ Copyright (c) 2013 Christian Glöckner <cgloeckner@freenet.de>
 This file is part of the networking module:
     https://github.com/cgloeckner/networking
 
-It offers a json-based networking framework for games and other software.
+It offers a tcp-based server-client framework for games and other software.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -31,48 +31,49 @@ SOFTWARE.
 #include "chatclient.hpp"
 #include "chatserver.hpp"
 
-int main(int argc, char **argv) {
+void servermode(std::uint16_t port) {
+    ChatServer server(port);
+    
     std::string input;
-    std::string rest;
-
-    ChatServer* server = NULL;
-    ChatClient* client = NULL;
-
-    if (SDLNet_Init() == -1) {
-        std::cerr << "SDLNet_Init: " << SDLNet_GetError() << std::endl;
-        return 1;
+    while (server.isOnline()) {
+        getline(std::cin, input);
+        if (input == "quit") {
+            server.request_logout();
+            break;
+        }
     }
+    server.shutdown();
+}
 
+void clientmode(std::string const & host, std::uint16_t port) {
+    std::cout << "Username: ";
+    std::string input;
+    getline(std::cin, input);
+
+    ChatClient client(host, port);
+    client.request_login(input);
+
+    while (client.isOnline()) {
+        getline(std::cin, input);
+        if (!client.authed) { continue; }
+        if (input == "quit") {
+            client.request_logout();
+        } else {
+            client.request_message(input);
+        }
+    }
+    
+    client.shutdown();
+}
+
+int main(int argc, char **argv) {
     switch (argc) {
         case 2: {
-            server = new ChatServer((std::uint16_t)(atoi(argv[1])));
-            while (true) {
-                getline(std::cin, input);
-                if (input == "quit") {
-                    server->request_logout();
-                    break;
-                }
-            }
-            server->shutdown();
-            delete server;
+            servermode(std::uint16_t(atoi(argv[1])));
             break;
         }
         case 3:{
-            std::cout << "Username: ";
-            getline(std::cin, input);
-            client = new ChatClient(argv[1], (std::uint16_t)(atoi(argv[2])));
-            client->request_login(input);
-            while (client->isOnline()) {
-                getline(std::cin, input);
-                if (!client->authed) { continue; }
-                if (input == "quit") {
-                    client->request_logout();
-                } else {
-                    client->request_message(input);
-                }
-            }
-            client->shutdown();
-            delete client;
+            clientmode(argv[1], std::uint16_t(atoi(argv[2])));
             break;
         }
         default:
@@ -80,9 +81,6 @@ int main(int argc, char **argv) {
                       << "\tdemo hostname port\t(start client)" << std::endl
                       << "\tdemo port\t\t(start server)" << std::endl;
     }
-
-    SDLNet_Quit();
-    //SDL_Quit();
 }
 
 
