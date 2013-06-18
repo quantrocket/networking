@@ -56,7 +56,7 @@ I testet this with GCC 4.6.4 on GNU/Linux Ubuntu 12.04 (32-bit) and SFML 2.0. Ju
 
 Q: This framework is TCP-only. Is there any UDP-support planned?
 
-A: Personally, I don't need UDP, yet. So I designed this framework as TCP-only and have no real plans to enable UDP support. If you like to use UDP within this framework, feel free to fork this framework.
+A: Yes, UDP-supported is planned!
 
 --
 
@@ -68,7 +68,7 @@ A: Yes and no. You need to modify some of the framework's parts by using Boost. 
 
 Q: This framework is built on SFML. I'm not using this I don't want to. How to use the framework in this case?
 
-A: I decided using SFML because of it's high level of features. So if you don't want to work with SFML, I'm sorry. But SFML is really easy, just in case you mistrust your skills.
+A: I plan to support multiple networking implementations as base of this Framework. SFML-Network and SDL_net will be supported in the future. I'm not shure about supporting Boost::asio, yet. Maybe :-) 
 
 --
 
