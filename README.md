@@ -52,6 +52,19 @@ I testet this with GCC 4.6.4 on GNU/Linux Ubuntu 12.04 (32-bit) and SFML 2.0. Ju
  - Blocking users by DNS does not work. E.g. block "127.0.0.1" instead of
     "localhost". I guess this also does not work for unblocking by DNS.
 
+# ToDos
+
+I plan to use an adapter for multiple socket implementations (SFML-Network,
+SDL_net) and differenc networking protocols (TCP, UDP). Server and client
+will use this common interface to work with the adapter. Then you'll only
+need to "give" a special Socket Listener to your server and a special
+socket to your client, to work with. The interface will support TCP and
+UDP. Which protocol is actual used will be determined by a flag, provided
+by the class derived from the interface. So server and client will
+automatically work with the correct internal sockets. Also I plan to offer
+a packet class like SFML's sf::Packet, to support your binary format within
+all of this socket implementations.
+
 # (Maybe) Frequently Asked Questions
 
 Q: This framework is TCP-only. Is there any UDP-support planned?
