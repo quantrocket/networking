@@ -81,7 +81,7 @@ A: Yes and no. You need to modify some of the framework's parts by using Boost. 
 
 Q: This framework is built on SFML. I'm not using this I don't want to. How to use the framework in this case?
 
-A: I plan to support multiple networking implementations as base of this Framework. SFML-Network and SDL_net will be supported in the future. I'm not shure about supporting Boost::asio, yet. Maybe :-) 
+A: I plan to support multiple networking implementations as base of this Framework. SFML-Network and SDL_net will be supported in the future. But currently, this future is really far away, sorry. And I'm not shure about supporting Boost::asio, at all.
 
 --
 
@@ -89,4 +89,8 @@ Q: What type of communication is supported?
 
 A: This is up to you! The server- and client-classes are template-based and are waiting for your protocol implementation. Everything is possible: JSON, XML or even your own binary protocol formate.
 
+--
 
+Q: Does this framework only provide server-client architecture?
+
+A: Currently, yes! But I plan to add a peer-to-peer implementation.
